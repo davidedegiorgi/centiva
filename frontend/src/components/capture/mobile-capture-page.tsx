@@ -7,6 +7,8 @@ import { dashboardApi, transactionApi } from '@/lib/api'
 import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
 
+const MAX_CAPTURE_SIDE = 1280
+
 interface MobileCapturePageProps {
   onEnterApp: () => void
 }
@@ -48,8 +50,8 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
         audio: false,
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
       })
 
@@ -85,13 +87,13 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
     }
   }, [startCamera])
 
-  async function analyzeImage(file: File) {
+  async function analyzeImage(image: File | HTMLCanvasElement) {
     setError(null)
     setIsScanning(true)
     setProgress(0)
 
     try {
-      const text = await recognizeImage(file, setProgress)
+      const text = await recognizeImage(image, setProgress)
       const rows = parseOcrText(text)
       if (rows.length === 0) throw new Error('Non ho trovato importi leggibili. Avvicina il documento e riprova.')
 
@@ -147,19 +149,14 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
       return
     }
 
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    const scale = Math.min(1, MAX_CAPTURE_SIDE / Math.max(video.videoWidth, video.videoHeight))
+    canvas.width = Math.round(video.videoWidth * scale)
+    canvas.height = Math.round(video.videoHeight * scale)
     const context = canvas.getContext('2d')
     if (!context) return
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9))
-    if (!blob) {
-      setError('Non è stato possibile acquisire la foto.')
-      return
-    }
-
-    await analyzeImage(new File([blob], `centiva-${Date.now()}.jpg`, { type: 'image/jpeg' }))
+    await analyzeImage(canvas)
   }
 
   return (

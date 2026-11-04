@@ -50,13 +50,19 @@ function App() {
 
   useEffect(() => {
     let isMounted = true
+    const shouldWarmOcr = window.matchMedia('(max-width: 767px)').matches
+
+    if (shouldWarmOcr) {
+      void import('@/lib/ocr').then(({ warmOcr }) => warmOcr()).catch(() => undefined)
+    }
 
     authApi
       .profile()
       .then((response) => {
         if (isMounted) {
+          const initialView = initialAuthenticatedView()
           setUser(response.data)
-          setActiveView(initialAuthenticatedView())
+          setActiveView(initialView)
         }
       })
       .catch((error: unknown) => {

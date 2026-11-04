@@ -1,11 +1,14 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 
 type ProgressListener = (progress: number) => void
+type OcrImage = File | HTMLCanvasElement
 
-const MAX_IMAGE_SIDE = 2000
+const MAX_UPLOAD_SIDE = 1600
+const FAST_LANGUAGE_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 
 let workerPromise: Promise<Worker> | null = null
 let progressListener: ProgressListener | null = null
+let lastReportedProgress = 0
 
 function getWorker() {
   if (!workerPromise) {
@@ -13,8 +16,13 @@ function getWorker() {
       'ita',
       OEM.LSTM_ONLY,
       {
+        langPath: FAST_LANGUAGE_PATH,
         logger: (message) => {
-          progressListener?.(Math.round(message.progress * 100))
+          const nextProgress = Math.round(message.progress * 100)
+          if (nextProgress >= 100 || nextProgress >= lastReportedProgress + 5) {
+            lastReportedProgress = nextProgress
+            progressListener?.(nextProgress)
+          }
         },
       },
       {
@@ -37,18 +45,19 @@ function getWorker() {
   return workerPromise
 }
 
-async function optimizeImage(file: File): Promise<File | HTMLCanvasElement> {
-  if (typeof createImageBitmap !== 'function') return file
+async function optimizeImage(image: OcrImage): Promise<OcrImage> {
+  if (image instanceof HTMLCanvasElement) return image
+  if (typeof createImageBitmap !== 'function') return image
 
-  const bitmap = await createImageBitmap(file)
+  const bitmap = await createImageBitmap(image)
   const longestSide = Math.max(bitmap.width, bitmap.height)
 
-  if (longestSide <= MAX_IMAGE_SIDE) {
+  if (longestSide <= MAX_UPLOAD_SIDE) {
     bitmap.close()
-    return file
+    return image
   }
 
-  const scale = MAX_IMAGE_SIDE / longestSide
+  const scale = MAX_UPLOAD_SIDE / longestSide
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
   canvas.height = Math.round(bitmap.height * scale)
@@ -56,7 +65,7 @@ async function optimizeImage(file: File): Promise<File | HTMLCanvasElement> {
   const context = canvas.getContext('2d', { alpha: false })
   if (!context) {
     bitmap.close()
-    return file
+    return image
   }
 
   context.imageSmoothingEnabled = true
@@ -71,11 +80,12 @@ export async function warmOcr() {
   await getWorker()
 }
 
-export async function recognizeImage(file: File, onProgress: ProgressListener) {
+export async function recognizeImage(imageSource: OcrImage, onProgress: ProgressListener) {
   progressListener = onProgress
+  lastReportedProgress = 0
 
   try {
-    const [worker, image] = await Promise.all([getWorker(), optimizeImage(file)])
+    const [worker, image] = await Promise.all([getWorker(), optimizeImage(imageSource)])
     const result = await worker.recognize(image, {}, { text: true })
     return result.data.text
   } finally {
