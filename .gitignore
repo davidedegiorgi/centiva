@@ -1,0 +1,45 @@
+# Segreti e configurazioni locali
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Dipendenze
+**/node_modules/
+**/vendor/
+
+# Build e report
+**/dist/
+**/build/
+**/coverage/
+**/.vite/
+
+# Runtime Laravel
+backend/storage/*.key
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/bootstrap/cache/*
+!backend/bootstrap/cache/.gitignore
+backend/database/*.sqlite
+backend/database/*.sqlite-*
+backend/public/storage
+
+# Log e file temporanei
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sistema operativo ed editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.git.dataless-backup-*/
+*.dataless-backup
+
