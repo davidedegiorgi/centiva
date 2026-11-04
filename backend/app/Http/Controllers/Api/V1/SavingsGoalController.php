@@ -18,6 +18,7 @@ class SavingsGoalController extends Controller
     {
         $goals = request()->user()->savingsGoals()
             ->withSum('contributions', 'amount')
+            ->withCount('contributions')
             ->with(['contributions' => fn ($query) => $query->latest('contributed_on')->limit(10)])
             ->orderByRaw("case when status = 'active' then 0 else 1 end")
             ->orderBy('target_date')->orderByDesc('created_at')->get();
@@ -35,7 +36,7 @@ class SavingsGoalController extends Controller
             'status' => SavingsGoalStatus::Active,
         ]);
 
-        return (new SavingsGoalResource($goal->loadSum('contributions', 'amount')->load('contributions')))
+        return (new SavingsGoalResource($goal->loadSum('contributions', 'amount')->loadCount('contributions')->load('contributions')))
             ->response()->setStatusCode(201);
     }
 
@@ -44,7 +45,7 @@ class SavingsGoalController extends Controller
      */
     public function show(SavingsGoal $savingsGoal): JsonResponse
     {
-        return (new SavingsGoalResource($savingsGoal->loadSum('contributions', 'amount')->load(['contributions' => fn ($query) => $query->latest('contributed_on')])))->response();
+        return (new SavingsGoalResource($savingsGoal->loadSum('contributions', 'amount')->loadCount('contributions')->load(['contributions' => fn ($query) => $query->latest('contributed_on')])))->response();
     }
 
     /**
@@ -59,7 +60,7 @@ class SavingsGoalController extends Controller
             : SavingsGoalStatus::Active;
         $savingsGoal->update(['status' => $status]);
 
-        return (new SavingsGoalResource($savingsGoal->refresh()->loadSum('contributions', 'amount')->load('contributions')))->response();
+        return (new SavingsGoalResource($savingsGoal->refresh()->loadSum('contributions', 'amount')->loadCount('contributions')->load('contributions')))->response();
     }
 
     /**

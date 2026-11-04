@@ -235,7 +235,7 @@ export const goalApi = {
   async remove(id: string): Promise<void> {
     return stateChangingRequest<void>(`/api/v1/savings-goals/${id}`, 'DELETE')
   },
-  async contribute(id: string, amount: number, notes: string | null): Promise<GoalResponse> {
+  async contribute(id: string, amount: number, notes: string | null = null): Promise<GoalResponse> {
     return stateChangingRequest<GoalResponse>(`/api/v1/savings-goals/${id}/contributions`, 'POST', {
       amount, notes, contributed_on: new Date().toISOString().slice(0, 10),
     })

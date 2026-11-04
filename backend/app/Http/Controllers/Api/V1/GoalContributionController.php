@@ -25,6 +25,6 @@ class GoalContributionController extends Controller
             return $lockedGoal;
         });
 
-        return (new SavingsGoalResource($goal->loadSum('contributions', 'amount')->load(['contributions' => fn ($query) => $query->latest('contributed_on')])))->response()->setStatusCode(201);
+        return (new SavingsGoalResource($goal->loadSum('contributions', 'amount')->loadCount('contributions')->load(['contributions' => fn ($query) => $query->latest('contributed_on')])))->response()->setStatusCode(201);
     }
 }
