@@ -32,6 +32,20 @@ function valueLabel(value: string | number, goal: SavingsGoal) {
   return money(value, goal.currency)
 }
 
+function normalizeGoal(goal: SavingsGoal): SavingsGoal {
+  return {
+    ...goal,
+    icon: goal.icon ?? 'target',
+    saving_frequency: goal.saving_frequency ?? null,
+    progress_unit: goal.progress_unit ?? 'currency',
+    challenge_template: goal.challenge_template ?? null,
+    plan: goal.plan ?? null,
+    badges: goal.badges ?? [],
+    motivation: goal.motivation ?? 'Quando metti davvero qualcosa da parte, registralo qui.',
+    contributions: goal.contributions ?? [],
+  }
+}
+
 export function GoalsPage() {
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null)
@@ -46,7 +60,7 @@ export function GoalsPage() {
 
   useEffect(() => {
     Promise.all([goalApi.list(), analysisApi.show().catch(() => null)])
-      .then(([goalResponse, analysisResponse]) => { setGoals(goalResponse.data); setAnalysis(analysisResponse?.data ?? null) })
+      .then(([goalResponse, analysisResponse]) => { setGoals(goalResponse.data.map(normalizeGoal)); setAnalysis(analysisResponse?.data ?? null) })
       .catch((caught) => setError(caught instanceof ApiError ? caught.message : 'Obiettivi non disponibili.'))
       .finally(() => setLoading(false))
   }, [])
@@ -65,7 +79,8 @@ export function GoalsPage() {
     setSaving(true)
     try {
       const response = editingId ? await goalApi.update(editingId, payload()) : await goalApi.create(payload())
-      setGoals((current) => editingId ? current.map((goal) => goal.id === editingId ? response.data : goal) : [response.data, ...current])
+      const savedGoal = normalizeGoal(response.data)
+      setGoals((current) => editingId ? current.map((goal) => goal.id === editingId ? savedGoal : goal) : [savedGoal, ...current])
       setForm(initialForm); setEditingId(null)
     } catch (caught) { setError(caught instanceof ApiError ? caught.message : 'Non è stato possibile salvare.') }
     finally { setSaving(false) }
@@ -90,7 +105,7 @@ export function GoalsPage() {
     setBusyId(goal.id); setError(null)
     try {
       const response = await goalApi.contribute(goal.id, amount, notes)
-      setGoals((current) => current.map((item) => item.id === goal.id ? response.data : item))
+      setGoals((current) => current.map((item) => item.id === goal.id ? normalizeGoal(response.data) : item))
       setContributions((current) => ({ ...current, [goal.id]: '' }))
     } catch (caught) { setError(caught instanceof ApiError ? caught.message : 'Accantonamento non riuscito.') }
     finally { setBusyId(null) }
