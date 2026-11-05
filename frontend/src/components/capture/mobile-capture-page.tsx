@@ -11,9 +11,10 @@ const MAX_CAPTURE_SIDE = 1280
 
 interface MobileCapturePageProps {
   onEnterApp: () => void
+  sessionReady?: boolean
 }
 
-export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
+export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCapturePageProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -45,6 +46,16 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
     }
 
     try {
+      try {
+        const permission = await navigator.permissions?.query({ name: 'camera' as PermissionName })
+        if (permission?.state === 'denied') {
+          setCameraError('Riattiva il permesso fotocamera nelle impostazioni del browser.')
+          return
+        }
+      } catch {
+        // Safari non espone sempre il permesso camera tramite Permissions API.
+      }
+
       streamRef.current?.getTracks().forEach((track) => track.stop())
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
@@ -74,11 +85,6 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
   useEffect(() => {
     const cameraFrame = window.requestAnimationFrame(() => void startCamera())
     void warmOcr().catch(() => undefined)
-    void dashboardApi.show().then(({ data }) => {
-      setMonthlySavings(Number(data.summary.net_savings))
-      setIncome(Number(data.summary.income))
-      setExpenses(Number(data.summary.expenses))
-    }).catch(() => setError('Non è stato possibile caricare il riepilogo mensile.'))
 
     return () => {
       window.cancelAnimationFrame(cameraFrame)
@@ -87,7 +93,18 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
     }
   }, [startCamera])
 
+  useEffect(() => {
+    if (!sessionReady) return
+
+    void dashboardApi.show().then(({ data }) => {
+      setMonthlySavings(Number(data.summary.net_savings))
+      setIncome(Number(data.summary.income))
+      setExpenses(Number(data.summary.expenses))
+    }).catch(() => setError('Non è stato possibile caricare il riepilogo mensile.'))
+  }, [sessionReady])
+
   async function analyzeImage(image: File | HTMLCanvasElement) {
+    if (!sessionReady) return
     setError(null)
     setIsScanning(true)
     setProgress(0)
@@ -176,8 +193,8 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
             <span className="text-rose-300">−{expenses.toFixed(2)} €</span>
           </div>
         </div>
-        <Button className="h-10 border-white/15 bg-black/45 text-white backdrop-blur-xl hover:bg-white/15 hover:text-white" variant="outline" onClick={onEnterApp}>
-          Entra nell’app <ArrowRight />
+        <Button className="h-10 border-white/15 bg-black/45 text-white backdrop-blur-xl hover:bg-white/15 hover:text-white" variant="outline" disabled={!sessionReady} onClick={onEnterApp}>
+          {sessionReady ? 'Entra nell’app' : 'Connessione…'} <ArrowRight />
         </Button>
       </header>
 
@@ -197,17 +214,17 @@ export function MobileCapturePage({ onEnterApp }: MobileCapturePageProps) {
         )}
 
         <div className="flex items-center gap-5">
-          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Carica foto" disabled={isScanning} onClick={() => fileInputRef.current?.click()}>
+          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Carica foto" disabled={!sessionReady || isScanning} onClick={() => fileInputRef.current?.click()}>
             <Upload className="size-5" />
           </button>
-          <button className="grid size-20 place-items-center rounded-full border-[5px] border-white bg-white/20 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform active:scale-90 disabled:opacity-50" type="button" aria-label="Scatta e analizza" disabled={!cameraReady || isScanning} onClick={() => void capturePhoto()}>
+          <button className="grid size-20 place-items-center rounded-full border-[5px] border-white bg-white/20 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform active:scale-90 disabled:opacity-50" type="button" aria-label="Scatta e analizza" disabled={!sessionReady || !cameraReady || isScanning} onClick={() => void capturePhoto()}>
             {isScanning ? <LoaderCircle className="size-7 animate-spin" /> : <Camera className="size-7" />}
           </button>
           <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Riavvia fotocamera" disabled={isScanning} onClick={() => { stopCamera(); void startCamera() }}>
             <RotateCcw className="size-5" />
           </button>
         </div>
-        <p className="text-center text-xs text-white/55">Scatta: il movimento viene salvato e il riepilogo mensile si aggiorna subito</p>
+        <p className="text-center text-xs text-white/55">{sessionReady ? 'Scatta: il movimento viene salvato e il riepilogo mensile si aggiorna subito' : 'Fotocamera pronta · verifica sicura della sessione in corso'}</p>
       </div>
 
       <canvas ref={canvasRef} className="hidden" />

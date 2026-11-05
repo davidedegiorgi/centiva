@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 
-import { AuthForm } from '@/components/auth/auth-form'
 import { BrandLogo } from '@/components/brand-logo'
 import { AppShell, type AppView } from '@/components/layout/app-shell'
 import { ApiError, authApi } from '@/lib/api'
@@ -12,6 +11,7 @@ type TransitionDocument = Document & {
 }
 
 const DashboardPage = lazy(async () => ({ default: (await import('@/components/dashboard/dashboard-page')).DashboardPage }))
+const AuthForm = lazy(async () => ({ default: (await import('@/components/auth/auth-form')).AuthForm }))
 const TransactionsPage = lazy(async () => ({ default: (await import('@/components/transactions/transactions-page')).TransactionsPage }))
 const ImportPage = lazy(async () => ({ default: (await import('@/components/import/import-page')).ImportPage }))
 const AnalysisPage = lazy(async () => ({ default: (await import('@/components/analysis/analysis-page')).AnalysisPage }))
@@ -31,6 +31,7 @@ function PageLoader() {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasAuthHint, setHasAuthHint] = useState(() => window.localStorage.getItem('centiva.authenticated') === '1')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [activeView, setActiveView] = useState<AppView>('dashboard')
 
@@ -61,11 +62,17 @@ function App() {
       .then((response) => {
         if (isMounted) {
           const initialView = initialAuthenticatedView()
+          window.localStorage.setItem('centiva.authenticated', '1')
+          setHasAuthHint(true)
           setUser(response.data)
           setActiveView(initialView)
         }
       })
       .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 401) {
+          window.localStorage.removeItem('centiva.authenticated')
+          setHasAuthHint(false)
+        }
         if (!(error instanceof ApiError && error.status === 401)) {
           console.error('Impossibile verificare la sessione.', error)
         }
@@ -86,6 +93,8 @@ function App() {
 
     try {
       await authApi.logout()
+      window.localStorage.removeItem('centiva.authenticated')
+      setHasAuthHint(false)
       setUser(null)
       setActiveView('dashboard')
     } catch (error) {
@@ -93,6 +102,12 @@ function App() {
     } finally {
       setIsLoggingOut(false)
     }
+  }
+
+  const showImmediateCamera = isLoading && hasAuthHint && window.matchMedia('(max-width: 767px)').matches
+
+  if (showImmediateCamera) {
+    return <Suspense fallback={<PageLoader />}><MobileCapturePage sessionReady={false} onEnterApp={() => undefined} /></Suspense>
   }
 
   if (isLoading) {
@@ -108,19 +123,21 @@ function App() {
 
   if (!user) {
     return (
-      <AuthForm
+      <Suspense fallback={<PageLoader />}><AuthForm
         onAuthenticated={(authenticatedUser) => {
+          window.localStorage.setItem('centiva.authenticated', '1')
+          setHasAuthHint(true)
           setUser(authenticatedUser)
           setActiveView(initialAuthenticatedView())
         }}
-      />
+      /></Suspense>
     )
   }
 
   if (activeView === 'capture') {
     return (
       <Suspense fallback={<PageLoader />}>
-        <MobileCapturePage onEnterApp={() => setActiveView('dashboard')} />
+        <MobileCapturePage sessionReady onEnterApp={() => setActiveView('dashboard')} />
       </Suspense>
     )
   }
