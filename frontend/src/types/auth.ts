@@ -38,3 +38,7 @@ export interface UpdateProfilePayload {
   name: string
   email: string
 }
+
+export interface DeleteAccountPayload {
+  confirmation: string
+}

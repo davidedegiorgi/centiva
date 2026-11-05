@@ -44,6 +44,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('auth.logout');
         Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])
+            ->middleware('throttle:3,1')
+            ->name('profile.destroy');
         Route::post('/transactions/bulk', BulkTransactionController::class)
             ->name('transactions.bulk');
         Route::apiResource('transactions', TransactionController::class);

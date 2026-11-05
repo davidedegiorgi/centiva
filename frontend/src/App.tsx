@@ -104,6 +104,13 @@ function App() {
     }
   }
 
+  function handleAccountDeleted() {
+    window.localStorage.removeItem('centiva.authenticated')
+    setHasAuthHint(false)
+    setUser(null)
+    setActiveView('dashboard')
+  }
+
   const showImmediateCamera = isLoading && hasAuthHint && window.matchMedia('(max-width: 767px)').matches
   const showAuthenticatedCamera = !isLoading && user !== null && activeView === 'capture'
 
@@ -161,7 +168,11 @@ function App() {
         ) : activeView === 'goals' ? (
           <GoalsPage />
         ) : (
-          <ProfilePage user={user} onUserChanged={setUser} />
+          <ProfilePage
+            user={user}
+            onUserChanged={setUser}
+            onAccountDeleted={handleAccountDeleted}
+          />
         )}
       </Suspense>
       </div>

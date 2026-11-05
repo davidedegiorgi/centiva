@@ -1,5 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CheckCircle2, Download, LoaderCircle, Save, Smartphone, UserRound } from 'lucide-react'
+import {
+  CheckCircle2,
+  Download,
+  LoaderCircle,
+  Save,
+  Smartphone,
+  Trash2,
+  TriangleAlert,
+  UserRound,
+  X,
+} from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -24,9 +34,10 @@ import type { User } from '@/types/auth'
 interface ProfilePageProps {
   user: User
   onUserChanged: (user: User) => void
+  onAccountDeleted: () => void
 }
 
-export function ProfilePage({ user, onUserChanged }: ProfilePageProps) {
+export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePageProps) {
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
   const [error, setError] = useState<ApiError | null>(null)
@@ -34,6 +45,10 @@ export function ProfilePage({ user, onUserChanged }: ProfilePageProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [isInstalled, setIsInstalled] = useState(isRunningStandalone)
   const [canInstall, setCanInstall] = useState(canInstallApp)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [deleteError, setDeleteError] = useState<ApiError | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
   useEffect(() => subscribeToInstallState(() => {
@@ -68,6 +83,33 @@ export function ProfilePage({ user, onUserChanged }: ProfilePageProps) {
       )
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  function closeDeleteConfirmation() {
+    if (isDeleting) return
+
+    setShowDeleteConfirmation(false)
+    setDeleteConfirmation('')
+    setDeleteError(null)
+  }
+
+  async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setDeleteError(null)
+    setIsDeleting(true)
+
+    try {
+      await authApi.deleteAccount({ confirmation: deleteConfirmation })
+      onAccountDeleted()
+    } catch (caughtError) {
+      setDeleteError(
+        caughtError instanceof ApiError
+          ? caughtError
+          : new ApiError('Si è verificato un errore inatteso.', 500),
+      )
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -192,6 +234,91 @@ export function ProfilePage({ user, onUserChanged }: ProfilePageProps) {
                 ? 'Su iPhone o iPad apri Centiva in Safari, tocca Condividi e scegli “Aggiungi alla schermata Home”.'
                 : 'Apri il menu del browser e scegli “Installa app” o “Aggiungi alla schermata Home”.'}
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-red-500/20 bg-[#0b0d0c] lg:col-start-2">
+        <CardHeader>
+          <div className="mb-2 grid size-10 place-items-center rounded-xl bg-red-500/10 text-red-300">
+            <TriangleAlert className="size-5" aria-hidden="true" />
+          </div>
+          <CardTitle>Zona pericolosa</CardTitle>
+          <CardDescription>
+            Elimina definitivamente il tuo account e tutti i dati associati.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!showDeleteConfirmation ? (
+            <Button
+              className="h-11 border-red-500/35 bg-transparent px-5 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteConfirmation(true)}
+            >
+              <Trash2 aria-hidden="true" />
+              Elimina account
+            </Button>
+          ) : (
+            <form className="flex flex-col gap-4" onSubmit={handleDeleteAccount}>
+              <Alert variant="destructive">
+                <TriangleAlert aria-hidden="true" />
+                <AlertTitle>Azione irreversibile</AlertTitle>
+                <AlertDescription>
+                  Verranno eliminati profilo, transazioni, obiettivi e accantonamenti. Non sarà possibile recuperarli.
+                </AlertDescription>
+              </Alert>
+
+              {deleteError && Object.keys(deleteError.errors).length === 0 && (
+                <Alert variant="destructive">
+                  <AlertTitle>Cancellazione non completata</AlertTitle>
+                  <AlertDescription>{deleteError.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="delete-confirmation">
+                  Scrivi <span className="font-mono font-semibold text-red-300">ELIMINA</span> per confermare
+                </Label>
+                <Input
+                  id="delete-confirmation"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  aria-invalid={Boolean(deleteError?.errors.confirmation)}
+                  className="border-red-500/25 focus-visible:border-red-400 focus-visible:ring-red-400/30"
+                />
+                {deleteError?.errors.confirmation?.[0] && (
+                  <p className="text-sm text-destructive">{deleteError.errors.confirmation[0]}</p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  className="h-11 bg-red-600 px-5 text-white hover:bg-red-500"
+                  type="submit"
+                  disabled={isDeleting || deleteConfirmation !== 'ELIMINA'}
+                >
+                  {isDeleting ? (
+                    <LoaderCircle className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Trash2 aria-hidden="true" />
+                  )}
+                  Elimina definitivamente
+                </Button>
+                <Button
+                  className="h-11"
+                  type="button"
+                  variant="ghost"
+                  disabled={isDeleting}
+                  onClick={closeDeleteConfirmation}
+                >
+                  <X aria-hidden="true" />
+                  Annulla
+                </Button>
+              </div>
+            </form>
           )}
         </CardContent>
       </Card>

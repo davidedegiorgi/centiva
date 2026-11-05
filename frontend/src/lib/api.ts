@@ -1,4 +1,5 @@
 import type {
+  DeleteAccountPayload,
   ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
@@ -152,6 +153,10 @@ export const authApi = {
 
   async updateProfile(payload: UpdateProfilePayload): Promise<UserResponse> {
     return stateChangingRequest<UserResponse>('/api/v1/profile', 'PATCH', payload)
+  },
+
+  async deleteAccount(payload: DeleteAccountPayload): Promise<void> {
+    return stateChangingRequest<void>('/api/v1/profile', 'DELETE', payload)
   },
 }
 
