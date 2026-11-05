@@ -105,9 +105,10 @@ function App() {
   }
 
   const showImmediateCamera = isLoading && hasAuthHint && window.matchMedia('(max-width: 767px)').matches
+  const showAuthenticatedCamera = !isLoading && user !== null && activeView === 'capture'
 
-  if (showImmediateCamera) {
-    return <Suspense fallback={<PageLoader />}><MobileCapturePage sessionReady={false} onEnterApp={() => undefined} /></Suspense>
+  if (showImmediateCamera || showAuthenticatedCamera) {
+    return <Suspense fallback={<PageLoader />}><MobileCapturePage sessionReady={showAuthenticatedCamera} onEnterApp={() => { if (user) setActiveView('dashboard') }} /></Suspense>
   }
 
   if (isLoading) {
@@ -131,14 +132,6 @@ function App() {
           setActiveView(initialAuthenticatedView())
         }}
       /></Suspense>
-    )
-  }
-
-  if (activeView === 'capture') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <MobileCapturePage sessionReady onEnterApp={() => setActiveView('dashboard')} />
-      </Suspense>
     )
   }
 

@@ -8,6 +8,46 @@ import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
 
 const MAX_CAPTURE_SIDE = 1280
+const CAMERA_RELEASE_DELAY = 1500
+
+let sharedCameraStream: MediaStream | null = null
+let pendingCameraStream: Promise<MediaStream> | null = null
+let cameraReleaseTimer: number | null = null
+
+function hasLiveVideo(stream: MediaStream | null): stream is MediaStream {
+  return stream?.getVideoTracks().some((track) => track.readyState === 'live') ?? false
+}
+
+async function acquireCameraStream(): Promise<MediaStream> {
+  if (cameraReleaseTimer !== null) {
+    window.clearTimeout(cameraReleaseTimer)
+    cameraReleaseTimer = null
+  }
+  if (hasLiveVideo(sharedCameraStream)) return sharedCameraStream
+  if (pendingCameraStream) return pendingCameraStream
+
+  pendingCameraStream = navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+  }).then((stream) => {
+    sharedCameraStream = stream
+    return stream
+  }).finally(() => { pendingCameraStream = null })
+
+  return pendingCameraStream
+}
+
+function stopSharedCamera(): void {
+  if (cameraReleaseTimer !== null) window.clearTimeout(cameraReleaseTimer)
+  cameraReleaseTimer = null
+  sharedCameraStream?.getTracks().forEach((track) => track.stop())
+  sharedCameraStream = null
+}
+
+function scheduleCameraRelease(): void {
+  if (cameraReleaseTimer !== null) window.clearTimeout(cameraReleaseTimer)
+  cameraReleaseTimer = window.setTimeout(stopSharedCamera, CAMERA_RELEASE_DELAY)
+}
 
 interface MobileCapturePageProps {
   onEnterApp: () => void
@@ -31,7 +71,7 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
   const [savingsEffect, setSavingsEffect] = useState<{ delta: number; key: number } | null>(null)
 
   const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
+    stopSharedCamera()
     streamRef.current = null
     setCameraReady(false)
   }, [])
@@ -56,18 +96,9 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
         // Safari non espone sempre il permesso camera tramite Permissions API.
       }
 
-      streamRef.current?.getTracks().forEach((track) => track.stop())
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      })
+      const stream = await acquireCameraStream()
 
       if (requestId !== cameraRequest.current) {
-        stream.getTracks().forEach((track) => track.stop())
         return
       }
 
@@ -89,7 +120,8 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
     return () => {
       window.cancelAnimationFrame(cameraFrame)
       cameraRequest.current += 1
-      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+      scheduleCameraRelease()
     }
   }, [startCamera])
 
