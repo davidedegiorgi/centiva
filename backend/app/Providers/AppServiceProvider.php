@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Models\SavingsGoal;
 use App\Models\Transaction;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -29,13 +28,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::preventLazyLoading(! $this->app->isProduction());
-
-        ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
-            return rtrim((string) config('app.frontend_url'), '/').'?'.http_build_query([
-                'reset_token' => $token,
-                'email' => $notifiable->getEmailForPasswordReset(),
-            ]);
-        });
 
         Route::bind('transaction', function (string $value): Transaction {
             $user = request()->user();

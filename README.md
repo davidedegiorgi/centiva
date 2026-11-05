@@ -75,6 +75,23 @@ npm run build
 
 I test Laravel usano un database SQLite effimero; l’applicazione usa PostgreSQL.
 
+## Email transazionali con Brevo
+
+Centiva invia email di benvenuto, recupero password e conferma eliminazione account tramite il mailer SMTP di Laravel. In produzione configurare queste variabili segrete sul servizio backend Render:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=null
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=LOGIN_SMTP_BREVO
+MAIL_PASSWORD=CHIAVE_SMTP_BREVO
+MAIL_FROM_ADDRESS=MITTENTE_VERIFICATO_SU_BREVO
+MAIL_FROM_NAME=Centiva
+```
+
+`MAIL_PASSWORD` deve contenere una chiave SMTP Brevo, non la password dell’account e non una chiave API. Il mittente deve essere stato creato e verificato in Brevo. Dopo ogni modifica alle variabili eseguire un nuovo deploy del backend, così Laravel ricostruisce la cache di configurazione.
+
 ## Deployment con Docker
 
 La configurazione inclusa espone soltanto il frontend su porta `8080`; Nginx inoltra le richieste API al container Laravel e PostgreSQL rimane nella rete privata Docker.

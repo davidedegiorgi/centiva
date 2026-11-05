@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AccountEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,8 +25,10 @@ class GoogleAuthController extends Controller
             ->redirect();
     }
 
-    public function callback(Request $request): RedirectResponse
-    {
+    public function callback(
+        Request $request,
+        AccountEmailService $accountEmailService,
+    ): RedirectResponse {
         if (! $this->isConfigured()) {
             return $this->frontendRedirect('Accesso con Google non ancora configurato.');
         }
@@ -67,7 +70,9 @@ class GoogleAuthController extends Controller
         $user->google_id = $googleId;
         $user->email_verified_at ??= now();
 
-        if (! $user->exists) {
+        $isNewUser = ! $user->exists;
+
+        if ($isNewUser) {
             // Mantiene compatibile il campo password senza creare credenziali utilizzabili.
             $user->password = Str::random(64);
         }
@@ -76,6 +81,10 @@ class GoogleAuthController extends Controller
 
         Auth::login($user, true);
         $request->session()->regenerate();
+
+        if ($isNewUser) {
+            $accountEmailService->sendWelcome($user);
+        }
 
         return redirect()->away($this->frontendUrl().'?auth=google');
     }

@@ -3,7 +3,9 @@
 namespace Tests\Feature\Api\V1\Auth;
 
 use App\Models\User;
+use App\Notifications\WelcomeToCentiva;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RegisteredUserControllerTest extends TestCase
@@ -19,6 +21,8 @@ class RegisteredUserControllerTest extends TestCase
 
     public function test_valid_payload_creates_user_authenticates_session_and_returns_201(): void
     {
+        Notification::fake();
+
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Giulia Bianchi',
             'email' => 'giulia@example.com',
@@ -37,6 +41,7 @@ class RegisteredUserControllerTest extends TestCase
         $this->assertAuthenticatedAs($user);
         $this->assertModelExists($user);
         $this->assertNotSame('SecurePass1!', $user->password);
+        Notification::assertSentTo($user, WelcomeToCentiva::class);
     }
 
     public function test_empty_payload_returns_422_with_required_field_messages(): void

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\DeleteProfileRequest;
 use App\Http\Requests\Api\V1\UpdateProfileRequest;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Services\AccountEmailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -27,11 +28,14 @@ class ProfileController extends Controller
         return (new UserResource($user->refresh()))->response();
     }
 
-    public function destroy(DeleteProfileRequest $request): Response
-    {
+    public function destroy(
+        DeleteProfileRequest $request,
+        AccountEmailService $accountEmailService,
+    ): Response {
         $user = $request->user();
         $userId = $user->getAuthIdentifier();
         $email = $user->email;
+        $name = $user->name;
 
         Auth::guard('web')->logout();
         Auth::guard('sanctum')->forgetUser();
@@ -52,6 +56,8 @@ class ProfileController extends Controller
 
             $user->delete();
         });
+
+        $accountEmailService->sendDeletionConfirmation($email, $name);
 
         return response()->noContent();
     }

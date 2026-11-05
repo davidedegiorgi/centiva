@@ -6,8 +6,10 @@ use App\Models\GoalContribution;
 use App\Models\SavingsGoal;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Notifications\AccountDeleted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ProfileControllerTest extends TestCase
@@ -110,6 +112,8 @@ class ProfileControllerTest extends TestCase
 
     public function test_user_can_permanently_delete_account_and_owned_data(): void
     {
+        Notification::fake();
+
         $user = User::factory()->create(['email' => 'delete@example.com']);
         $otherUser = User::factory()->create();
         $transaction = Transaction::factory()->for($user)->create();
@@ -137,5 +141,11 @@ class ProfileControllerTest extends TestCase
 
         $this->assertDatabaseHas('users', ['id' => $otherUser->id]);
         $this->assertDatabaseHas('transactions', ['id' => $otherTransaction->id]);
+
+        Notification::assertSentOnDemand(
+            AccountDeleted::class,
+            fn (AccountDeleted $notification, array $channels, object $notifiable): bool => $channels === ['mail']
+                && $notifiable->routes['mail'] === [$user->email => $user->name],
+        );
     }
 }

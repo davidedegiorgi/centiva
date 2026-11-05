@@ -3,7 +3,9 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Notifications\WelcomeToCentiva;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as GoogleUser;
 use Mockery;
@@ -27,6 +29,8 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_google_callback_creates_user_and_authenticates_session(): void
     {
+        Notification::fake();
+
         $googleUser = (new GoogleUser)->setRaw([
             'email_verified' => true,
         ])->map([
@@ -47,10 +51,15 @@ class GoogleAuthControllerTest extends TestCase
             'email' => 'mario@example.com',
             'google_id' => 'google-123',
         ]);
+
+        $user = User::query()->where('email', 'mario@example.com')->firstOrFail();
+        Notification::assertSentTo($user, WelcomeToCentiva::class);
     }
 
     public function test_google_callback_links_existing_user_with_same_verified_email(): void
     {
+        Notification::fake();
+
         $user = User::factory()->create(['email' => 'mario@example.com']);
         $googleUser = (new GoogleUser)->setRaw([
             'email_verified' => true,
@@ -71,6 +80,7 @@ class GoogleAuthControllerTest extends TestCase
             'id' => $user->id,
             'google_id' => 'google-456',
         ]);
+        Notification::assertNothingSent();
     }
 
     public function test_unverified_google_email_is_rejected(): void

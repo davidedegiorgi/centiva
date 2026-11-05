@@ -3,7 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
+use App\Notifications\ResetCentivaPassword;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -26,7 +26,7 @@ class PasswordResetControllerTest extends TestCase
             'Se esiste un account associato, riceverai un link per reimpostare la password.',
         );
 
-        Notification::assertSentTo($user, ResetPasswordNotification::class);
+        Notification::assertSentTo($user, ResetCentivaPassword::class);
     }
 
     public function test_unknown_email_receives_same_response_without_notification(): void
