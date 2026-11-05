@@ -1,6 +1,8 @@
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
+
+import { SafeCanvas } from '@/components/effects/safe-canvas'
 
 const vertexShader = `
   uniform float uTime;
@@ -68,10 +70,23 @@ function TitlePlane({ text }: { text: string }) {
 }
 
 export function KineticTitle({ text }: { text: string }) {
+  const fallback = (
+    <div className="kinetic-title-static" aria-hidden="true">
+      {text}
+    </div>
+  )
+
   return <div className="kinetic-title" data-cursor-label="DISTORT">
     <span className="sr-only">{text}</span>
-    <Canvas orthographic camera={{ position: [0, 0, 5], zoom: 90 }} dpr={[1, 1.35]} gl={{ alpha: true, antialias: false }}>
+    <SafeCanvas
+      orthographic
+      camera={{ position: [0, 0, 5], zoom: 90 }}
+      dpr={[1, 1.35]}
+      gl={{ alpha: true, antialias: false }}
+      fallback={fallback}
+      resetKey={text}
+    >
       <TitlePlane text={text} />
-    </Canvas>
+    </SafeCanvas>
   </div>
 }

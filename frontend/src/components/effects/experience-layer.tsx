@@ -1,10 +1,12 @@
-import { Canvas, useFrame } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import 'lenis/dist/lenis.css'
+
+import { SafeCanvas } from '@/components/effects/safe-canvas'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -120,9 +122,10 @@ function ContextCursor() {
 export function ExperienceLayer() {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const coarse = window.matchMedia('(pointer: coarse)').matches
+  const backgroundFallback = <div className="webgl-field-static size-full" aria-hidden="true" />
 
   return <>
-    {!reduced && !coarse && <div className="webgl-field" aria-hidden="true"><Canvas camera={{ position: [0, 0, 7], fov: 52 }} dpr={[1, 1.4]} gl={{ antialias: false, alpha: true }}><ParticleField /></Canvas></div>}
+    {!reduced && !coarse && <div className="webgl-field" aria-hidden="true"><SafeCanvas camera={{ position: [0, 0, 7], fov: 52 }} dpr={[1, 1.4]} gl={{ antialias: false, alpha: true }} fallback={backgroundFallback}><ParticleField /></SafeCanvas></div>}
     <SmoothScroll />
     <ContextCursor />
   </>

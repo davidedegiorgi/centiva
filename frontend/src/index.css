@@ -206,6 +206,13 @@
   opacity: 0.8;
 }
 
+.webgl-field-static {
+  background:
+    radial-gradient(circle at 22% 28%, rgb(16 185 129 / 0.1), transparent 24%),
+    radial-gradient(circle at 76% 68%, rgb(228 228 231 / 0.07), transparent 20%),
+    linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.018) 50%, transparent 65%);
+}
+
 .museum-cursor {
   position: fixed;
   top: 0;
@@ -279,6 +286,51 @@
   height: clamp(120px, 20vw, 260px);
 }
 
+.kinetic-title-static {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  overflow: hidden;
+  color: rgb(244 244 240 / 0.92);
+  font-family: 'Syne Variable', sans-serif;
+  font-size: clamp(2.6rem, 8.8vw, 8.2rem);
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: -0.08em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.receipt-monolith-static {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.receipt-monolith-static img {
+  width: min(72%, 440px);
+  height: 88%;
+  object-fit: contain;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 5px;
+  box-shadow: 0 32px 80px -36px rgb(0 0 0 / 0.95);
+}
+
+.receipt-static-scan {
+  position: absolute;
+  inset-inline: 12%;
+  top: 18%;
+  height: 1px;
+  background: rgb(52 211 153 / 0.82);
+  box-shadow: 0 0 18px 3px rgb(16 185 129 / 0.28);
+  animation: receipt-static-scanning 2.4s ease-in-out infinite alternate;
+}
+
 .receipt-reveal {
   animation: receipt-camera-reveal 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -297,6 +349,11 @@
 @keyframes receipt-camera-reveal {
   from { opacity: 0; transform: perspective(1400px) translate3d(0, 8vh, -180px) rotateX(3deg) scale(0.9); filter: blur(12px); }
   to { opacity: 1; transform: perspective(1400px) translate3d(0, 0, 0) rotateX(0) scale(1); filter: blur(0); }
+}
+
+@keyframes receipt-static-scanning {
+  from { transform: translateY(0); }
+  to { transform: translateY(min(46vh, 430px)); }
 }
 
 @media (max-width: 1023px) {

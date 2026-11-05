@@ -1,7 +1,9 @@
-import { Canvas, useFrame, useLoader } from '@react-three/fiber'
+import { useFrame, useLoader } from '@react-three/fiber'
 import { Float, RoundedBox } from '@react-three/drei'
 import { Suspense, useMemo, useRef } from 'react'
 import * as THREE from 'three'
+
+import { SafeCanvas } from '@/components/effects/safe-canvas'
 
 const receiptVertex = `
   uniform float uTime;
@@ -74,11 +76,23 @@ function ReceiptObject({ imageUrl, scanning }: { imageUrl: string; scanning: boo
 }
 
 export function ReceiptMonolith({ imageUrl, scanning }: { imageUrl: string; scanning: boolean }) {
+  const fallback = (
+    <div className="receipt-monolith-static" aria-label="Anteprima statica dello scontrino">
+      <img src={imageUrl} alt="Documento acquisito" />
+      {scanning && <span className="receipt-static-scan" aria-hidden="true" />}
+    </div>
+  )
+
   return <div className="receipt-monolith" data-cursor-label="SCAN / TILT">
-    <Canvas camera={{ position: [0, 0, 4.4], fov: 42 }} dpr={[1, 1.5]}>
+    <SafeCanvas
+      camera={{ position: [0, 0, 4.4], fov: 42 }}
+      dpr={[1, 1.5]}
+      fallback={fallback}
+      resetKey={imageUrl}
+    >
       <ambientLight intensity={1.4} />
       <directionalLight position={[3, 4, 5]} intensity={3} color="#d8fff0" />
       <Suspense fallback={null}><ReceiptObject imageUrl={imageUrl} scanning={scanning} /></Suspense>
-    </Canvas>
+    </SafeCanvas>
   </div>
 }

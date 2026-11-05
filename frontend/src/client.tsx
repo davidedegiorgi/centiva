@@ -2,6 +2,7 @@ import { lazy, StrictMode, Suspense, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import App from '@/App'
+import { WebGLErrorBoundary } from '@/components/effects/webgl-error-boundary'
 import { initializePwa } from '@/lib/pwa'
 import '@/index.css'
 
@@ -38,7 +39,13 @@ function DeferredExperienceLayer() {
     }
   }, [])
 
-  return enabled ? <Suspense fallback={null}><ExperienceLayer /></Suspense> : null
+  const fallback = <div className="webgl-field webgl-field-static" aria-hidden="true" />
+
+  return enabled ? (
+    <WebGLErrorBoundary fallback={fallback}>
+      <Suspense fallback={fallback}><ExperienceLayer /></Suspense>
+    </WebGLErrorBoundary>
+  ) : null
 }
 
 const root = document.getElementById('root')
