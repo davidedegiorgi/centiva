@@ -4,6 +4,10 @@ import { LoaderCircle } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { AppShell, type AppView } from '@/components/layout/app-shell'
 import { ApiError, authApi } from '@/lib/api'
+import {
+  getAuthenticatedStartupView,
+  shouldShowImmediateCamera,
+} from '@/lib/startup-view'
 import type { User } from '@/types/auth'
 
 type TransitionDocument = Document & {
@@ -20,10 +24,6 @@ const GoalsPage = lazy(async () => ({ default: (await import('@/components/goals
 const ProfilePage = lazy(async () => ({ default: (await import('@/components/profile/profile-page')).ProfilePage }))
 const MobileCapturePage = lazy(async () => ({ default: (await import('@/components/capture/mobile-capture-page')).MobileCapturePage }))
 
-function initialAuthenticatedView(): AppView {
-  return window.matchMedia('(max-width: 767px)').matches ? 'capture' : 'dashboard'
-}
-
 function PageLoader() {
   return <div className="grid min-h-[60vh] place-items-center"><LoaderCircle className="size-6 animate-spin text-emerald-300" aria-label="Caricamento pagina" /></div>
 }
@@ -34,6 +34,9 @@ function App() {
   const [hasAuthHint, setHasAuthHint] = useState(() => window.localStorage.getItem('centiva.authenticated') === '1')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [activeView, setActiveView] = useState<AppView>('dashboard')
+  const [isGoogleAuthenticationReturn] = useState(
+    () => new URLSearchParams(window.location.search).get('auth') === 'google',
+  )
 
   function changeView(nextView: AppView) {
     if (nextView === activeView) return
@@ -51,9 +54,15 @@ function App() {
 
   useEffect(() => {
     let isMounted = true
-    const shouldWarmOcr = window.matchMedia('(max-width: 767px)').matches
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
 
-    if (shouldWarmOcr) {
+    if (isGoogleAuthenticationReturn) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('auth')
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+    }
+
+    if (isMobile) {
       void import('@/lib/ocr').then(({ warmOcr }) => warmOcr()).catch(() => undefined)
     }
 
@@ -61,7 +70,10 @@ function App() {
       .profile()
       .then((response) => {
         if (isMounted) {
-          const initialView = initialAuthenticatedView()
+          const initialView = getAuthenticatedStartupView({
+            isMobile,
+            isGoogleAuthenticationReturn,
+          })
           window.localStorage.setItem('centiva.authenticated', '1')
           setHasAuthHint(true)
           setUser(response.data)
@@ -86,7 +98,7 @@ function App() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [isGoogleAuthenticationReturn])
 
   async function handleLogout() {
     setIsLoggingOut(true)
@@ -111,7 +123,12 @@ function App() {
     setActiveView('dashboard')
   }
 
-  const showImmediateCamera = isLoading && hasAuthHint && window.matchMedia('(max-width: 767px)').matches
+  const showImmediateCamera = shouldShowImmediateCamera({
+    isLoading,
+    hasAuthenticationHint: hasAuthHint,
+    isMobile: window.matchMedia('(max-width: 767px)').matches,
+    isGoogleAuthenticationReturn,
+  })
   const showAuthenticatedCamera = !isLoading && user !== null && activeView === 'capture'
 
   if (showImmediateCamera || showAuthenticatedCamera) {
@@ -136,7 +153,7 @@ function App() {
           window.localStorage.setItem('centiva.authenticated', '1')
           setHasAuthHint(true)
           setUser(authenticatedUser)
-          setActiveView(initialAuthenticatedView())
+          setActiveView('dashboard')
         }}
       /></Suspense>
     )
