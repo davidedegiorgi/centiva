@@ -211,7 +211,7 @@
   top: 0;
   left: 0;
   z-index: 100;
-  display: grid;
+  display: none;
   width: 14px;
   height: 14px;
   pointer-events: none;
@@ -304,7 +304,8 @@
   .receipt-reveal { grid-template-columns: 1fr; }
 }
 
-@media (pointer: fine) {
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .museum-cursor { display: grid; }
   body, a, button, input, select, summary { cursor: none !important; }
 }
 
