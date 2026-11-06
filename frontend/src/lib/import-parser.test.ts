@@ -168,6 +168,55 @@ describe('parseOcrText', () => {
     expect(rows[0]).toMatchObject({ amount: '18.60', category: 'Spesa' })
   })
 
+  it('reads the attached Caseificio receipt when OCR changes monetary commas to dots', () => {
+    const rows = parseOcrText(`
+      CASEIFICIO LA GRAZIA
+      CAVALERA MAILA SRLS
+      DOCUMENTO COMMERCIALE DI VENDITA O PRESTAZIONE
+      DESCRIZIONE IVA PREZZO
+      REPARTO 1 4% 5.00
+      TOTALE COMPLESSIVO 5.00
+      DI CUI IVA 0,19
+      PAGAMENTO CONTANTE 5.00
+      IMPORTO PAGATO 5.00
+      30-10-2026 10:20
+      DOCUMENTO N. 0998-0017
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      amount: '5.00',
+      occurred_on: '2026-10-30',
+      category: 'Spesa',
+    })
+  })
+
+  it('does not fall back to VAT when a receipt total is unreadable', () => {
+    const rows = parseOcrText(`
+      CASEIFICIO LA GRAZIA
+      DOCUMENTO COMMERCIALE
+      TOTALE COMPLESSIVO ILLEGGIBILE
+      DI CUI IVA 0,19
+      30-10-2026 10:20
+    `)
+
+    expect(rows).toEqual([])
+  })
+
+  it('does not mistake a comma-corrupted receipt date for a price', () => {
+    const rows = parseOcrText(`
+      CASEIFICIO LA GRAZIA
+      DOCUMENTO COMMERCIALE
+      TOTALE COMPLESSIVO 5.00
+      DI CUI IVA 0,19
+      IMPORTO PAGATO 5.00
+      30,10,2026 10:20
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '5.00', occurred_on: '2026-10-30' })
+  })
+
   it('extracts every movement grouped below an Oggi heading', () => {
     const today = new Date()
     const expectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`

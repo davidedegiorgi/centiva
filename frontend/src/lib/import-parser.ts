@@ -61,7 +61,7 @@ export function parseDate(value: string): string {
   const iso = value.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/)
   if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`
 
-  const italian = value.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/)
+  const italian = value.match(/^(\d{1,2})[-/.,](\d{1,2})[-/.,](\d{2,4})/)
   if (italian) {
     const year = italian[3].length === 2 ? `20${italian[3]}` : italian[3]
     return `${year}-${italian[2].padStart(2, '0')}-${italian[1].padStart(2, '0')}`
@@ -137,7 +137,7 @@ export function suggestCategory(text: string, type: 'income' | 'expense' = 'expe
     ['Commissioni', ['commissione', 'canone carta', 'imposta di bollo', 'spese bancarie']],
     ['Abbonamenti', ['amazon prime', 'prime video', 'netflix', 'spotify', 'disney plus', 'dazn', 'sky', 'now tv', 'apple.com/bill', 'icloud', 'google one', 'youtube premium', 'chatgpt', 'openai', 'microsoft 365', 'adobe', 'canva', 'abbonamento']],
     ['Ristorazione', ['ristorante', 'ristorazione', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'gelateria', 'pasticceria', 'paninoteca', 'tavola calda', 'coperto', 'menu', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
-    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'panificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly', 'pasta', 'latte', 'pane', 'formaggio', 'yogurt', 'biscotti', 'detersivo', 'ortaggi', 'frutta', 'verdura']],
+    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'panificio', 'caseificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly', 'pasta', 'latte', 'pane', 'formaggio', 'yogurt', 'biscotti', 'detersivo', 'ortaggi', 'frutta', 'verdura']],
     ['Trasporti', ['trenitalia', 'italo treno', 'biglietto treno', 'metro', 'autobus', 'trasporto', 'taxi', 'uber', 'freenow', 'telepass', 'autostrade', 'parcheggio', 'benzina', 'carburante', 'distributore', 'eni station', 'q8', 'tamoil', 'ip gruppo api', 'atm milano']],
     ['Utenze', ['bolletta', 'energia', 'elettricita', 'luce e gas', 'enel', 'a2a', 'hera', 'iren', 'acea', 'telefono', 'telefonia', 'vodafone', 'tim', 'windtre', 'iliad', 'fastweb', 'internet fibra']],
     ['Casa', ['affitto', 'condominio', 'mutuo', 'ikea', 'leroy merlin', 'brico', 'mobilificio', 'ferramenta', 'casalinghi', 'arredamento']],
@@ -196,7 +196,7 @@ export function parseCsv(file: File): Promise<ImportDraft[]> {
   })
 }
 
-const numericDatePattern = /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b/i
+const numericDatePattern = /\b\d{1,2}[/.,-]\d{1,2}[/.,-]\d{2,4}\b/i
 const textualDatePattern = /\b\d{1,2}\s+(?:gen(?:naio)?|feb(?:braio)?|mar(?:zo)?|apr(?:ile)?|mag(?:gio)?|giu(?:gno)?|lug(?:lio)?|ago(?:sto)?|set(?:t|tembre)?|ott(?:obre)?|nov(?:embre)?|dic(?:embre)?)(?:\s+\d{2,4})?\b/i
 const colonTimePattern = /\b(?:[01]?\d|2[0-3])[:;]\d{2}(?::\d{2})?\b/g
 const dotTimePattern = /\b(?:[01]?\d|2[0-3])[.]\d{2}\b/g
@@ -234,7 +234,7 @@ function amountCandidates(line: string): AmountCandidate[] {
     const hasCurrency = /€|EUR/i.test(raw) || /€|EUR/i.test(context)
     const hasSign = /[+-]/.test(raw)
     const hasMoneyWord = /totale|importo|addebito|accredito|pagamento|prelievo|rimborso|saldo/i.test(line)
-    if (looksLikeTime && !hasCurrency && !hasSign) return []
+    if (looksLikeTime && !hasCurrency && !hasSign && !hasMoneyWord) return []
 
     let score = 0
     if (hasCurrency) score += 6
@@ -361,7 +361,7 @@ export function parseOcrText(text: string): ImportDraft[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   if (isReceiptText(lines)) {
     const receipt = receiptDraft(lines)
-    if (receipt) return [receipt]
+    return receipt ? [receipt] : []
   }
 
   const dated: ImportDraft[] = []
