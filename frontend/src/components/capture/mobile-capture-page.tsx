@@ -208,7 +208,7 @@ export function MobileCapturePage() {
   }
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden bg-black text-white">
+    <main className="relative h-[100svh] overflow-hidden overscroll-none bg-black text-white touch-none">
       <video ref={videoRef} className="absolute inset-0 size-full object-cover" muted playsInline aria-label="Anteprima fotocamera" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.72),transparent_34%,transparent_55%,rgba(0,0,0,0.9))]" />
       <div className="pointer-events-none absolute inset-0 border border-emerald-200/15 shadow-[inset_0_0_90px_rgba(16,185,129,0.08)]">
@@ -226,7 +226,7 @@ export function MobileCapturePage() {
         </div>
       </header>
 
-      <div className="absolute inset-x-5 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col items-center gap-4">
+      <div className="absolute inset-x-5 bottom-[calc(6.75rem+env(safe-area-inset-bottom))] z-10 flex flex-col items-center gap-4">
         {(cameraError || error) && (
           <div className="flex w-full max-w-md items-start gap-2 rounded-xl border border-amber-300/25 bg-black/70 p-3 text-sm text-amber-100 backdrop-blur-xl">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />

@@ -112,12 +112,6 @@ function App() {
     setActiveView('dashboard')
   }
 
-  const showAuthenticatedCamera = !isLoading && user !== null && activeView === 'capture'
-
-  if (showAuthenticatedCamera) {
-    return <Suspense fallback={<PageLoader />}><MobileCapturePage /></Suspense>
-  }
-
   if (isLoading) {
     return (
       <main className="grid min-h-screen place-items-center bg-background">
@@ -146,12 +140,15 @@ function App() {
       user={user}
       activeView={activeView}
       isLoggingOut={isLoggingOut}
+      immersive={activeView === 'capture'}
       onViewChange={changeView}
       onLogout={handleLogout}
     >
       <div className="view-stage" key={activeView}>
       <Suspense fallback={<PageLoader />}>
-        {activeView === 'dashboard' ? (
+        {activeView === 'capture' ? (
+          <MobileCapturePage />
+        ) : activeView === 'dashboard' ? (
           <DashboardPage
             onOpenImport={() => changeView('import')}
             onOpenInsights={() => changeView('analysis')}

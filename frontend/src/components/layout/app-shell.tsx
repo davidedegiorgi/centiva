@@ -22,6 +22,7 @@ interface AppShellProps {
   user: User
   activeView: AppView
   isLoggingOut: boolean
+  immersive?: boolean
   children: ReactNode
   onViewChange: (view: AppView) => void
   onLogout: () => void
@@ -31,15 +32,16 @@ export function AppShell({
   user,
   activeView,
   isLoggingOut,
+  immersive = false,
   children,
   onViewChange,
   onLogout,
 }: AppShellProps) {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background">
+    <div className={`relative bg-background ${immersive ? 'h-[100svh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'}`}>
       <div className="pointer-events-none fixed -left-40 top-20 size-96 rounded-full bg-emerald-500/[0.07] blur-3xl" />
       <div className="pointer-events-none fixed -right-48 top-[38%] size-[30rem] rounded-full bg-teal-400/[0.05] blur-3xl" />
-      <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-[#080d0b]/85 backdrop-blur-xl">
+      {!immersive && <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-[#080d0b]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-8">
           <button
             className="flex items-center"
@@ -71,15 +73,15 @@ export function AppShell({
             </Button>
           </div>
         </div>
-      </header>
+      </header>}
 
-      <div className="pb-[calc(10rem+env(safe-area-inset-bottom))] sm:pb-[calc(11rem+env(safe-area-inset-bottom))]">{children}</div>
+      <div className={immersive ? 'h-full overflow-hidden' : 'pb-[calc(10rem+env(safe-area-inset-bottom))] sm:pb-[calc(11rem+env(safe-area-inset-bottom))]'}>{children}</div>
 
       <nav
-        className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-1rem)] max-w-3xl -translate-x-1/2 rounded-[1.4rem] border border-white/15 bg-[#090c0a]/90 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.55),inset_0_1px_rgba(255,255,255,0.07)] backdrop-blur-2xl"
+        className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-1rem)] max-w-3xl -translate-x-1/2 touch-pan-x overscroll-none rounded-[1.4rem] border border-white/15 bg-[#090c0a]/90 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.55),inset_0_1px_rgba(255,255,255,0.07)] backdrop-blur-2xl"
         aria-label="Navigazione principale"
       >
-        <div className="flex min-w-0 items-stretch gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-0 touch-pan-x items-stretch gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navigationItems.map(({ view, label, icon: Icon }) => {
             const isActive = activeView === view || (view === 'capture' && activeView === 'import')
             const isAddAction = view === 'capture'
