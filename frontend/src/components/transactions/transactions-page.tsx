@@ -72,7 +72,9 @@ export function TransactionsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [isSelecting, setIsSelecting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -85,6 +87,9 @@ export function TransactionsPage() {
         if (isMounted) {
           setTransactions(response.data)
           setMeta(response.meta)
+          setSelectedIds((current) => new Set(
+            [...current].filter((id) => response.data.some((transaction) => transaction.id === id)),
+          ))
         }
       })
       .catch((caughtError: unknown) => {
@@ -152,30 +157,50 @@ export function TransactionsPage() {
     setRefreshKey((value) => value + 1)
   }
 
-  async function handleDelete(transaction: Transaction) {
+  function toggleSelection(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllVisible() {
+    const visibleIds = transactions.map((transaction) => transaction.id)
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
+    setSelectedIds(allVisibleSelected ? new Set() : new Set(visibleIds))
+  }
+
+  function stopSelecting() {
+    setIsSelecting(false)
+    setSelectedIds(new Set())
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return
     const confirmed = window.confirm(
-      `Eliminare definitivamente questa transazione in “${primaryText(transaction)}”?`,
+      `Eliminare definitivamente ${selectedIds.size} ${selectedIds.size === 1 ? 'transazione' : 'transazioni'}?`,
     )
 
-    if (!confirmed) {
-      return
-    }
+    if (!confirmed) return
 
-    setDeletingId(transaction.id)
+    setIsDeleting(true)
     setError(null)
 
     try {
-      await transactionApi.remove(transaction.id)
+      await transactionApi.removeMany([...selectedIds])
+      stopSelecting()
       setIsLoading(true)
       setRefreshKey((value) => value + 1)
     } catch (caughtError) {
       setError(
         caughtError instanceof ApiError
           ? caughtError
-          : new ApiError('Impossibile eliminare la transazione.', 500),
+          : new ApiError('Impossibile eliminare le transazioni selezionate.', 500),
       )
     } finally {
-      setDeletingId(null)
+      setIsDeleting(false)
     }
   }
 
@@ -199,14 +224,26 @@ export function TransactionsPage() {
             Registra e ritrova entrate e uscite in un unico posto.
           </p>
         </div>
-        <Button
-          className="h-10 bg-emerald-600 px-4 text-white hover:bg-emerald-700"
-          type="button"
-          onClick={openCreateForm}
-        >
-          <Plus aria-hidden="true" />
-          Nuova transazione
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            className="h-10 border-rose-300/25 text-rose-200 hover:bg-rose-500/10 hover:text-rose-100"
+            variant="outline"
+            type="button"
+            disabled={transactions.length === 0 && !isSelecting}
+            onClick={() => isSelecting ? stopSelecting() : setIsSelecting(true)}
+          >
+            <Trash2 aria-hidden="true" />
+            {isSelecting ? 'Annulla' : 'Elimina'}
+          </Button>
+          <Button
+            className="h-10 bg-emerald-600 px-4 text-white hover:bg-emerald-700"
+            type="button"
+            onClick={openCreateForm}
+          >
+            <Plus aria-hidden="true" />
+            Nuova transazione
+          </Button>
+        </div>
       </div>
 
       {isFormOpen && (
@@ -300,11 +337,26 @@ export function TransactionsPage() {
       )}
 
       <Card className="mb-4 overflow-hidden border-white/10 bg-card">
-        <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
           <p className="font-medium text-foreground">
-            {meta.total === 1 ? '1 transazione' : `${meta.total} transazioni`}
+            {isSelecting
+              ? `${selectedIds.size} ${selectedIds.size === 1 ? 'selezionata' : 'selezionate'}`
+              : (meta.total === 1 ? '1 transazione' : `${meta.total} transazioni`)}
           </p>
-          {isLoading && <LoaderCircle className="size-4 animate-spin text-emerald-600" aria-label="Caricamento" />}
+          <div className="flex items-center gap-2">
+            {isSelecting && transactions.length > 0 && (
+              <>
+                <Button variant="ghost" size="sm" type="button" disabled={isDeleting} onClick={toggleAllVisible}>
+                  {transactions.every((transaction) => selectedIds.has(transaction.id)) ? 'Deseleziona tutte' : 'Seleziona tutte'}
+                </Button>
+                <Button className="bg-rose-600 text-white hover:bg-rose-500" size="sm" type="button" disabled={selectedIds.size === 0 || isDeleting} onClick={() => void handleBulkDelete()}>
+                  {isDeleting ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+                  Elimina {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                </Button>
+              </>
+            )}
+            {isLoading && <LoaderCircle className="size-4 animate-spin text-emerald-600" aria-label="Caricamento" />}
+          </div>
         </div>
 
         {!isLoading && transactions.length === 0 ? (
@@ -329,16 +381,28 @@ export function TransactionsPage() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-white/10 bg-white/[0.035] text-xs uppercase tracking-wide text-zinc-400">
                   <tr>
+                    {isSelecting && <th className="w-12 px-5 py-3"><span className="sr-only">Seleziona</span></th>}
                     <th className="px-5 py-3 font-medium">Data</th>
                     <th className="px-5 py-3 font-medium">Movimento</th>
                     <th className="px-5 py-3 font-medium">Categoria e stato</th>
                     <th className="px-5 py-3 text-right font-medium">Importo</th>
-                    <th className="w-28 px-5 py-3"><span className="sr-only">Azioni</span></th>
+                    {!isSelecting && <th className="w-20 px-5 py-3"><span className="sr-only">Azioni</span></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
                   {transactions.map((transaction) => (
                     <tr key={transaction.id} className="transition-colors hover:bg-white/[0.035]">
+                      {isSelecting && (
+                        <td className="px-5 py-4">
+                          <input
+                            className="size-4 cursor-pointer accent-emerald-400"
+                            type="checkbox"
+                            checked={selectedIds.has(transaction.id)}
+                            aria-label={`Seleziona ${primaryText(transaction)}`}
+                            onChange={() => toggleSelection(transaction.id)}
+                          />
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">
                         {formatDate(transaction.occurred_on)}
                       </td>
@@ -367,20 +431,13 @@ export function TransactionsPage() {
                       <td className={`whitespace-nowrap px-5 py-4 text-right font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
                         {transaction.type === 'income' ? '+' : '−'} {formatAmount(transaction)}
                       </td>
-                      <td className="px-5 py-4">
+                      {!isSelecting && <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" type="button" onClick={() => openEditForm(transaction)} aria-label={`Modifica ${primaryText(transaction)}`}>
                             <Pencil aria-hidden="true" />
                           </Button>
-                          <Button variant="ghost" size="icon" type="button" disabled={deletingId === transaction.id} onClick={() => handleDelete(transaction)} aria-label={`Elimina ${primaryText(transaction)}`}>
-                            {deletingId === transaction.id ? (
-                              <LoaderCircle className="animate-spin" aria-hidden="true" />
-                            ) : (
-                              <Trash2 aria-hidden="true" />
-                            )}
-                          </Button>
                         </div>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>
@@ -389,9 +446,18 @@ export function TransactionsPage() {
 
             <div className="divide-y divide-white/10 md:hidden">
               {transactions.map((transaction) => (
-                <article className="flex flex-col gap-3 p-4" key={transaction.id}>
+                <article className={`flex flex-col gap-3 p-4 ${selectedIds.has(transaction.id) ? 'bg-emerald-400/[0.06]' : ''}`} key={transaction.id}>
                   <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
+                    {isSelecting && (
+                      <input
+                        className="mt-1 size-5 shrink-0 cursor-pointer accent-emerald-400"
+                        type="checkbox"
+                        checked={selectedIds.has(transaction.id)}
+                        aria-label={`Seleziona ${primaryText(transaction)}`}
+                        onChange={() => toggleSelection(transaction.id)}
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-foreground">{primaryText(transaction)}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {formatDate(transaction.occurred_on)}
@@ -405,14 +471,11 @@ export function TransactionsPage() {
                       {transaction.type === 'income' ? '+' : '−'} {formatAmount(transaction)}
                     </p>
                   </div>
-                  <div className="flex justify-end gap-1">
+                  {!isSelecting && <div className="flex justify-end gap-1">
                     <Button variant="ghost" size="sm" type="button" onClick={() => openEditForm(transaction)}>
                       <Pencil aria-hidden="true" /> Modifica
                     </Button>
-                    <Button variant="ghost" size="sm" type="button" disabled={deletingId === transaction.id} onClick={() => handleDelete(transaction)}>
-                      <Trash2 aria-hidden="true" /> Elimina
-                    </Button>
-                  </div>
+                  </div>}
                 </article>
               ))}
             </div>

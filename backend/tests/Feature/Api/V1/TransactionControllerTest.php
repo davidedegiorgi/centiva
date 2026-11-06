@@ -263,6 +263,42 @@ class TransactionControllerTest extends TestCase
         $this->assertModelMissing($transaction);
     }
 
+    public function test_user_can_delete_multiple_owned_transactions_without_deleting_another_users_data(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $first = Transaction::factory()->for($user)->create();
+        $second = Transaction::factory()->for($user)->create();
+        $otherTransaction = Transaction::factory()->for($otherUser)->create();
+
+        $response = $this->actingAs($user)->deleteJson('/api/v1/transactions/bulk', [
+            'ids' => [$first->id, $second->id, $otherTransaction->id],
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('deleted', 2);
+        $this->assertModelMissing($first);
+        $this->assertModelMissing($second);
+        $this->assertModelExists($otherTransaction);
+    }
+
+    public function test_bulk_delete_requires_valid_distinct_transaction_ids(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->deleteJson('/api/v1/transactions/bulk', ['ids' => ['non-valido', 'non-valido']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['ids.0', 'ids.1']);
+    }
+
+    public function test_unauthenticated_bulk_delete_returns_401(): void
+    {
+        $this->deleteJson('/api/v1/transactions/bulk', ['ids' => [fake()->uuid()]])
+            ->assertUnauthorized();
+    }
+
     /** @return array<string, mixed> */
     private function validPayload(): array
     {

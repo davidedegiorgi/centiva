@@ -198,6 +198,14 @@ export const transactionApi = {
     return stateChangingRequest<void>(`/api/v1/transactions/${id}`, 'DELETE')
   },
 
+  async removeMany(ids: string[]): Promise<{ deleted: number }> {
+    return stateChangingRequest<{ deleted: number }>(
+      '/api/v1/transactions/bulk',
+      'DELETE',
+      { ids },
+    )
+  },
+
   async bulk(payload: BulkImportPayload): Promise<{ data: TransactionResponse['data'][] }> {
     return stateChangingRequest<{ data: TransactionResponse['data'][] }>(
       '/api/v1/transactions/bulk',

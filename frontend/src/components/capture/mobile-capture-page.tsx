@@ -261,7 +261,6 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
           </button>
           <span className="size-12" aria-hidden="true" />
         </div>
-        <p className="text-center text-xs text-white/55">{sessionReady ? 'Scatta: il movimento viene salvato e il riepilogo mensile si aggiorna subito' : 'Fotocamera pronta · verifica sicura della sessione in corso'}</p>
       </div>
 
       <canvas ref={canvasRef} className="hidden" />

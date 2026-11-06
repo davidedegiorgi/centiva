@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AnalysisController;
 use App\Http\Controllers\Api\V1\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisteredUserController;
+use App\Http\Controllers\Api\V1\BulkDeleteTransactionController;
 use App\Http\Controllers\Api\V1\BulkTransactionController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\GoalContributionController;
@@ -49,6 +50,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('profile.destroy');
         Route::post('/transactions/bulk', BulkTransactionController::class)
             ->name('transactions.bulk');
+        Route::delete('/transactions/bulk', BulkDeleteTransactionController::class)
+            ->name('transactions.bulk-destroy');
         Route::apiResource('transactions', TransactionController::class);
     });
 });
