@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ArrowRight, Camera, Check, LoaderCircle, RotateCcw, Upload } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Camera, Check, FolderOpen, Images, LoaderCircle, X } from 'lucide-react'
 
 import { LiquidNumber } from '@/components/effects/liquid-number'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,7 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const cameraRequest = useRef(0)
   const [cameraReady, setCameraReady] = useState(false)
@@ -68,13 +69,8 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
   const [income, setIncome] = useState(0)
   const [expenses, setExpenses] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [isSourcePickerOpen, setIsSourcePickerOpen] = useState(false)
   const [savingsEffect, setSavingsEffect] = useState<{ delta: number; key: number } | null>(null)
-
-  const stopCamera = useCallback(() => {
-    stopSharedCamera()
-    streamRef.current = null
-    setCameraReady(false)
-  }, [])
 
   const startCamera = useCallback(async () => {
     const requestId = ++cameraRequest.current
@@ -187,7 +183,13 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
     } finally {
       setIsScanning(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
+      if (galleryInputRef.current) galleryInputRef.current.value = ''
     }
+  }
+
+  function selectImage(input: HTMLInputElement | null) {
+    setIsSourcePickerOpen(false)
+    input?.click()
   }
 
   async function capturePhoto() {
@@ -245,22 +247,41 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
           </div>
         )}
 
-        <div className="flex items-center gap-5">
-          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Carica foto" disabled={!sessionReady || isScanning} onClick={() => fileInputRef.current?.click()}>
-            <Upload className="size-5" />
+        {isSourcePickerOpen && (
+          <section className="w-full max-w-sm rounded-2xl border border-white/15 bg-black/85 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl" role="dialog" aria-modal="true" aria-label="Scegli una foto">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-sm font-medium text-white">Aggiungi una foto</p>
+              <button className="grid size-8 place-items-center rounded-full text-white/65 hover:bg-white/10 hover:text-white" type="button" aria-label="Chiudi" onClick={() => setIsSourcePickerOpen(false)}>
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-sm text-white hover:bg-white/10" type="button" onClick={() => selectImage(galleryInputRef.current)}>
+                <Images className="size-6 text-emerald-300" />
+                Libreria foto
+              </button>
+              <button className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-sm text-white hover:bg-white/10" type="button" onClick={() => selectImage(fileInputRef.current)}>
+                <FolderOpen className="size-6 text-emerald-300" />
+                Scegli file
+              </button>
+            </div>
+          </section>
+        )}
+
+        <div className="flex items-center gap-6">
+          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Scegli foto o file" aria-expanded={isSourcePickerOpen} disabled={!sessionReady || isScanning} onClick={() => setIsSourcePickerOpen((current) => !current)}>
+            <Images className="size-5" />
           </button>
           <button className="grid size-20 place-items-center rounded-full border-[5px] border-white bg-white/20 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform active:scale-90 disabled:opacity-50" type="button" aria-label="Scatta e analizza" disabled={!sessionReady || !cameraReady || isScanning} onClick={() => void capturePhoto()}>
             {isScanning ? <LoaderCircle className="size-7 animate-spin" /> : <Camera className="size-7" />}
-          </button>
-          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Riavvia fotocamera" disabled={isScanning} onClick={() => { stopCamera(); void startCamera() }}>
-            <RotateCcw className="size-5" />
           </button>
         </div>
         <p className="text-center text-xs text-white/55">{sessionReady ? 'Scatta: il movimento viene salvato e il riepilogo mensile si aggiorna subito' : 'Fotocamera pronta · verifica sicura della sessione in corso'}</p>
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
-      <input ref={fileInputRef} className="hidden" type="file" accept="image/*" capture="environment" onChange={(event) => event.target.files?.[0] && void analyzeImage(event.target.files[0])} />
+      <input ref={galleryInputRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={(event) => event.target.files?.[0] && void analyzeImage(event.target.files[0])} />
+      <input ref={fileInputRef} className="hidden" type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif" onChange={(event) => event.target.files?.[0] && void analyzeImage(event.target.files[0])} />
 
       {savingsEffect && (
         <div key={savingsEffect.key} className={`capture-balance-burst pointer-events-none fixed inset-0 z-[70] grid place-items-center ${savingsEffect.delta >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
