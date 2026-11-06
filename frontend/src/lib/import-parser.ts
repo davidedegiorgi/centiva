@@ -201,6 +201,7 @@ const textualDatePattern = /\b\d{1,2}\s+(?:gen(?:naio)?|feb(?:braio)?|mar(?:zo)?
 const colonTimePattern = /\b(?:[01]?\d|2[0-3])[:;]\d{2}(?::\d{2})?\b/g
 const dotTimePattern = /\b(?:[01]?\d|2[0-3])[.]\d{2}\b/g
 const moneyPattern = /(?:€\s*)?[+-]?\s*\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})(?:\s*(?:€|EUR))?|(?:€\s*)?[+-]?\s*\d+(?:[.,]\d{2})(?:\s*(?:€|EUR))?/gi
+export const OCR_VARIANT_SEPARATOR = '\n<<<CENTIVA_OCR_VARIANT>>>\n'
 
 interface AmountCandidate { value: number; raw: string; index: number; score: number }
 interface DetectedEntry { candidate: AmountCandidate; relativeIndex: number }
@@ -357,7 +358,7 @@ function receiptDraft(lines: string[]): ImportDraft | null {
   }
 }
 
-export function parseOcrText(text: string): ImportDraft[] {
+function parseSingleOcrText(text: string): ImportDraft[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   if (isReceiptText(lines)) {
     const receipt = receiptDraft(lines)
@@ -420,4 +421,19 @@ export function parseOcrText(text: string): ImportDraft[] {
     notes: '',
     source: 'ocr',
   }]
+}
+
+export function parseOcrText(text: string): ImportDraft[] {
+  const variants = text
+    .split(OCR_VARIANT_SEPARATOR)
+    .map((variant) => variant.trim())
+    .filter(Boolean)
+  const parsedVariants = variants.map(parseSingleOcrText)
+  const selectedRows = [...parsedVariants].reverse().find((rows) => rows.length > 0) ?? []
+  const combinedText = variants.join(' ')
+
+  return selectedRows.map((row) => ({
+    ...row,
+    category: suggestCategory(combinedText, row.type),
+  }))
 }

@@ -1,5 +1,7 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 
+import { OCR_VARIANT_SEPARATOR } from '@/lib/import-parser'
+
 type ProgressListener = (progress: number) => void
 type OcrImage = File | HTMLCanvasElement
 
@@ -9,6 +11,8 @@ const FAST_LANGUAGE_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 let workerPromise: Promise<Worker> | null = null
 let progressListener: ProgressListener | null = null
 let lastReportedProgress = 0
+let progressRangeStart = 0
+let progressRangeEnd = 100
 
 function getWorker() {
   if (!workerPromise) {
@@ -18,7 +22,7 @@ function getWorker() {
       {
         langPath: FAST_LANGUAGE_PATH,
         logger: (message) => {
-          const nextProgress = Math.round(message.progress * 100)
+          const nextProgress = Math.round(progressRangeStart + message.progress * (progressRangeEnd - progressRangeStart))
           if (nextProgress >= 100 || nextProgress >= lastReportedProgress + 5) {
             lastReportedProgress = nextProgress
             progressListener?.(nextProgress)
@@ -78,12 +82,33 @@ export async function warmOcr() {
 export async function recognizeImage(imageSource: OcrImage, onProgress: ProgressListener) {
   progressListener = onProgress
   lastReportedProgress = 0
+  progressRangeStart = 0
+  progressRangeEnd = 70
 
   try {
     const [worker, image] = await Promise.all([getWorker(), optimizeImage(imageSource)])
-    const result = await worker.recognize(image, {}, { text: true })
-    return result.data.text
+    await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT })
+    const sparseResult = await worker.recognize(image, {}, { text: true })
+    const sparseText = sparseResult.data.text
+    const looksLikeReceipt = /documento|scontrino|ricevuta|\biva\b|prezzo|totale|pagamento\W*cont|importo\W*pag/i.test(sparseText)
+
+    if (!looksLikeReceipt) {
+      onProgress(100)
+      return sparseText
+    }
+
+    progressRangeStart = 70
+    progressRangeEnd = 100
+    lastReportedProgress = 70
+    onProgress(70)
+    await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
+    const blockResult = await worker.recognize(image, {}, { text: true })
+    onProgress(100)
+
+    return `${sparseText}${OCR_VARIANT_SEPARATOR}${blockResult.data.text}`
   } finally {
     progressListener = null
+    progressRangeStart = 0
+    progressRangeEnd = 100
   }
 }

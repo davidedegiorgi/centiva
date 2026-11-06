@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseOcrText, suggestCategory } from '@/lib/import-parser'
+import { OCR_VARIANT_SEPARATOR, parseOcrText, suggestCategory } from '@/lib/import-parser'
 
 describe('suggestCategory', () => {
   it.each([
@@ -215,6 +215,31 @@ describe('parseOcrText', () => {
 
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ amount: '5.00', occurred_on: '2026-10-30' })
+  })
+
+  it('prefers the receipt-specific OCR pass when sparse OCR reads five as nine', () => {
+    const sparseText = `
+      CASEIFICIO LA GRAZIA
+      DOCUMENTO COMMERCIALE
+      REPARTO 1 9:00
+      TOTALE COMPLESSIVO 9,0)
+      DI CUI IVA 0,19
+      PAGAMENTO CONTANTE 9:00
+      IMPORTO PAGATO 9,00
+      30510:20
+    `
+    const blockText = `
+      CAVALERA MAILA SRLS
+      DOCUMENTO COMMERCIALE
+      REPARTO 1 4% 9:00
+      PAGAMENTO CONTANIE 5,00
+      DOCUMENTO N. 0998-0017
+    `
+
+    const rows = parseOcrText(`${sparseText}${OCR_VARIANT_SEPARATOR}${blockText}`)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '5.00', category: 'Spesa' })
   })
 
   it('extracts every movement grouped below an Oggi heading', () => {
