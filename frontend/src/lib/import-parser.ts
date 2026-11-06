@@ -136,8 +136,8 @@ export function suggestCategory(text: string, type: 'income' | 'expense' = 'expe
     ['Prelievi', ['prelievo', 'cash withdrawal', 'sportello atm']],
     ['Commissioni', ['commissione', 'canone carta', 'imposta di bollo', 'spese bancarie']],
     ['Abbonamenti', ['amazon prime', 'prime video', 'netflix', 'spotify', 'disney plus', 'dazn', 'sky', 'now tv', 'apple.com/bill', 'icloud', 'google one', 'youtube premium', 'chatgpt', 'openai', 'microsoft 365', 'adobe', 'canva', 'abbonamento']],
-    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'panificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly']],
-    ['Ristorazione', ['ristorante', 'ristorazione', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'gelateria', 'pasticceria', 'paninoteca', 'tavola calda', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
+    ['Ristorazione', ['ristorante', 'ristorazione', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'gelateria', 'pasticceria', 'paninoteca', 'tavola calda', 'coperto', 'menu', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
+    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'panificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly', 'pasta', 'latte', 'pane', 'formaggio', 'yogurt', 'biscotti', 'detersivo', 'ortaggi', 'frutta', 'verdura']],
     ['Trasporti', ['trenitalia', 'italo treno', 'biglietto treno', 'metro', 'autobus', 'trasporto', 'taxi', 'uber', 'freenow', 'telepass', 'autostrade', 'parcheggio', 'benzina', 'carburante', 'distributore', 'eni station', 'q8', 'tamoil', 'ip gruppo api', 'atm milano']],
     ['Utenze', ['bolletta', 'energia', 'elettricita', 'luce e gas', 'enel', 'a2a', 'hera', 'iren', 'acea', 'telefono', 'telefonia', 'vodafone', 'tim', 'windtre', 'iliad', 'fastweb', 'internet fibra']],
     ['Casa', ['affitto', 'condominio', 'mutuo', 'ikea', 'leroy merlin', 'brico', 'mobilificio', 'ferramenta', 'casalinghi', 'arredamento']],
@@ -281,11 +281,15 @@ function deduplicateNearbyEntries(entries: DetectedEntry[]): DetectedEntry[] {
 
 function isReceiptText(lines: string[]): boolean {
   const text = lines.join(' ')
+  const candidates = lines.flatMap((line) => amountCandidates(line))
+  const signedAmounts = candidates.filter((candidate) => /[+-]/.test(candidate.raw)).length
+  const dates = lines.filter((line) => dateIn(line)).length
   const hasStrongReceiptSignal = /scontrino|ricevuta|documento commerciale|partita\s+iva|p\.?\s*iva|imponibile|subtotale|\biva\b|\bresto\b/i.test(text)
   const hasExplicitTotal = /totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|importo\s+(?:pagato|dovuto)/i.test(text)
   const hasBankMovementSignal = /pagamento\s+(?:pos|e-?commerce)|bonifico|accredito|prelievo|operazione\s+carta|carte\s+postepay/i.test(text)
+  const hasReceiptStructure = candidates.length >= 2 && signedAmounts <= 1 && dates <= 1 && !hasBankMovementSignal
 
-  return hasStrongReceiptSignal || (hasExplicitTotal && !hasBankMovementSignal)
+  return hasStrongReceiptSignal || (hasExplicitTotal && !hasBankMovementSignal) || hasReceiptStructure
 }
 
 function receiptScore(line: string, candidate: AmountCandidate): number {
@@ -293,14 +297,16 @@ function receiptScore(line: string, candidate: AmountCandidate): number {
   const suffix = line.slice(candidate.index + candidate.raw.length, candidate.index + candidate.raw.length + 32).toLowerCase()
   let score = candidate.score
 
-  if (/\b(?:iva|imposta|imponibile|subtotale|resto|sconto|risparmio|acconto|commissione|aliquota|di\s+cui)\b[^\d]*$/i.test(prefix)) {
+  if (/\b(?:iva|imposta|imponibile|subtotale|resto|sconto|risparmio|acconto|commissione|aliquota|di\s+cui|numero|codice|transazione|terminale|autorizzazione|lotteria|matricola)\b[^\d]*$/i.test(prefix)) {
     score -= 120
   } else if (/(?:totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|importo\s+(?:pagato|dovuto)|da\s+pagare)[^\d]*$/i.test(prefix)) {
     score += 140
   } else if (/\btotale[^\d]*$/i.test(prefix)) {
     score += 100
-  } else if (/\b(?:pagato|contanti|carta)\b[^\d]*$/i.test(prefix)) {
-    score += 35
+  } else if (/\b(?:pagato|carta|bancomat|pos)\b[^\d]*$/i.test(prefix)) {
+    score += 70
+  } else if (/\bcontanti\b[^\d]*$/i.test(prefix)) {
+    score += 20
   }
 
   if (/^\s*(?:totale|da\s+pagare)\b/i.test(suffix)) score += 90
@@ -310,17 +316,23 @@ function receiptScore(line: string, candidate: AmountCandidate): number {
 }
 
 function receiptDraft(lines: string[]): ImportDraft | null {
-  const candidates = lines.flatMap((line, lineIndex) => amountCandidates(line).map((candidate): ReceiptAmountCandidate => ({
-    ...candidate,
-    lineIndex,
-    receiptScore: receiptScore(line, candidate),
-  })))
+  const candidates = lines.flatMap((line, lineIndex) => amountCandidates(line).flatMap((candidate): ReceiptAmountCandidate[] => {
+    if (candidate.value <= 0 || Math.abs(candidate.value) > 100000) return []
+    return [{ ...candidate, lineIndex, receiptScore: receiptScore(line, candidate) }]
+  }))
   if (candidates.length === 0) return null
 
+  candidates.forEach((candidate) => {
+    const matchingAmounts = candidates.filter((other) => Math.abs(other.value - candidate.value) < 0.005).length
+    candidate.receiptScore += Math.min(50, (matchingAmounts - 1) * 25)
+  })
+
   const explicitTotals = candidates.filter((candidate) => candidate.receiptScore >= 80)
+  const labelledPayments = candidates.filter((candidate) => candidate.receiptScore >= 25)
   const usableCandidates = candidates.filter((candidate) => candidate.receiptScore > -40)
   const selected = explicitTotals.sort((left, right) => right.receiptScore - left.receiptScore || right.lineIndex - left.lineIndex)[0]
-    ?? usableCandidates.sort((left, right) => Math.abs(right.value) - Math.abs(left.value) || right.lineIndex - left.lineIndex)[0]
+    ?? labelledPayments.sort((left, right) => right.receiptScore - left.receiptScore || right.lineIndex - left.lineIndex)[0]
+    ?? usableCandidates.sort((left, right) => right.lineIndex - left.lineIndex || right.index - left.index)[0]
   if (!selected) return null
 
   const text = lines.join(' ')

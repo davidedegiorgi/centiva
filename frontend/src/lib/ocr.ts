@@ -3,7 +3,7 @@ import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 type ProgressListener = (progress: number) => void
 type OcrImage = File | HTMLCanvasElement
 
-const MAX_UPLOAD_SIDE = 1600
+const MAX_UPLOAD_SIDE = 2000
 const FAST_LANGUAGE_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 
 let workerPromise: Promise<Worker> | null = null
@@ -46,18 +46,12 @@ function getWorker() {
 }
 
 async function optimizeImage(image: OcrImage): Promise<OcrImage> {
-  if (image instanceof HTMLCanvasElement) return image
   if (typeof createImageBitmap !== 'function') return image
 
   const bitmap = await createImageBitmap(image)
   const longestSide = Math.max(bitmap.width, bitmap.height)
 
-  if (longestSide <= MAX_UPLOAD_SIDE) {
-    bitmap.close()
-    return image
-  }
-
-  const scale = MAX_UPLOAD_SIDE / longestSide
+  const scale = Math.min(1, MAX_UPLOAD_SIDE / longestSide)
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
   canvas.height = Math.round(bitmap.height * scale)
@@ -70,6 +64,7 @@ async function optimizeImage(image: OcrImage): Promise<OcrImage> {
 
   context.imageSmoothingEnabled = true
   context.imageSmoothingQuality = 'high'
+  context.filter = 'grayscale(1) contrast(1.25)'
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   bitmap.close()
   return canvas

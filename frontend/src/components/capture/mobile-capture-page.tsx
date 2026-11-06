@@ -7,7 +7,7 @@ import { dashboardApi, transactionApi } from '@/lib/api'
 import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
 
-const MAX_CAPTURE_SIDE = 1280
+const MAX_CAPTURE_SIDE = 1600
 const CAMERA_RELEASE_DELAY = 1500
 
 let sharedCameraStream: MediaStream | null = null
@@ -28,7 +28,7 @@ async function acquireCameraStream(): Promise<MediaStream> {
 
   pendingCameraStream = navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
   }).then((stream) => {
     sharedCameraStream = stream
     return stream

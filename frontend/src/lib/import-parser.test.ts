@@ -123,10 +123,40 @@ describe('parseOcrText', () => {
     expect(rows[0]).toMatchObject({ amount: '24.90', category: 'Salute' })
   })
 
-  it('falls back to the largest eligible receipt amount when the total label is unreadable', () => {
+  it('uses the labelled card payment when the total label is unreadable', () => {
     const rows = parseOcrText(`
       PENNY MARKET
       DOCUMENTO COMMERCIALE
+      ARTICOLO 4,20
+      ARTICOLO 7,40
+      PAGAMENTO CARTA 18,60
+      IVA 1,69
+      04/11/2026 12:15
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '18.60', category: 'Spesa' })
+  })
+
+  it('recognizes a receipt from its structure when OCR misses fiscal labels', () => {
+    const rows = parseOcrText(`
+      ALIMENTARI DA MARIO
+      PASTA 2,40
+      LATTE 1,80
+      BISCOTTI 3,20
+      T0TALE 7,40
+      06/11/2026 17:31
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '7.40', category: 'Spesa' })
+  })
+
+  it('does not select an invented large code before the payment amount', () => {
+    const rows = parseOcrText(`
+      PENNY MARKET
+      DOCUMENTO COMMERCIALE
+      CODICE TRANSAZIONE 9999,99
       ARTICOLO 4,20
       ARTICOLO 7,40
       PAGAMENTO CARTA 18,60
