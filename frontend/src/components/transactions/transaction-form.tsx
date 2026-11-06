@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError, transactionApi } from '@/lib/api'
+import { IMPORT_CATEGORIES } from '@/lib/import-parser'
 import type {
   Transaction,
   TransactionPayload,
@@ -38,12 +39,18 @@ export function TransactionForm({
   const [amount, setAmount] = useState(transaction?.amount ?? '')
   const [currency, setCurrency] = useState(transaction?.currency ?? 'EUR')
   const [occurredOn, setOccurredOn] = useState(transaction?.occurred_on ?? today())
-  const [description, setDescription] = useState(transaction?.description ?? '')
-  const [merchant, setMerchant] = useState(transaction?.merchant ?? '')
-  const [category, setCategory] = useState(transaction?.category ?? '')
-  const [notes, setNotes] = useState(transaction?.notes ?? '')
+  const [category, setCategory] = useState(transaction?.category ?? 'Altro')
   const [error, setError] = useState<ApiError | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const categoryOptions = Array.from(new Set([category, ...IMPORT_CATEGORIES].filter(Boolean)))
+
+  function updateType(nextType: TransactionType) {
+    setType(nextType)
+
+    if (!transaction) {
+      setCategory(nextType === 'income' ? 'Entrate' : 'Altro')
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -55,10 +62,7 @@ export function TransactionForm({
       amount: Number(amount),
       currency,
       occurred_on: occurredOn,
-      description: description.trim(),
-      merchant: merchant.trim() || null,
-      category: category.trim() || null,
-      notes: notes.trim() || null,
+      category: category.trim() || 'Altro',
     }
 
     try {
@@ -109,7 +113,7 @@ export function TransactionForm({
               id="transaction-type"
               className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
               value={type}
-              onChange={(event) => setType(event.target.value as TransactionType)}
+              onChange={(event) => updateType(event.target.value as TransactionType)}
             >
               <option value="expense">Uscita</option>
               <option value="income">Entrata</option>
@@ -170,54 +174,21 @@ export function TransactionForm({
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="transaction-category">Categoria</Label>
-            <Input
+            <select
               id="transaction-category"
-              placeholder="Es. Spesa, Casa, Trasporti"
+              className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
+              required
               value={category}
               onChange={(event) => setCategory(event.target.value)}
               aria-invalid={Boolean(error?.errors.category)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor="transaction-description">Descrizione</Label>
-            <Input
-              id="transaction-description"
-              required
-              maxLength={255}
-              placeholder="Es. Spesa settimanale"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              aria-invalid={Boolean(error?.errors.description)}
-            />
-            {error?.errors.description?.[0] && (
-              <p className="text-sm text-destructive">{error.errors.description[0]}</p>
+            >
+              {categoryOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+            {error?.errors.category?.[0] && (
+              <p className="text-sm text-destructive">{error.errors.category[0]}</p>
             )}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor="transaction-merchant">Esercente o controparte</Label>
-            <Input
-              id="transaction-merchant"
-              maxLength={160}
-              placeholder="Facoltativo"
-              value={merchant}
-              onChange={(event) => setMerchant(event.target.value)}
-              aria-invalid={Boolean(error?.errors.merchant)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor="transaction-notes">Note</Label>
-            <textarea
-              id="transaction-notes"
-              className="min-h-24 resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/50"
-              maxLength={2000}
-              placeholder="Facoltative"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              aria-invalid={Boolean(error?.errors.notes)}
-            />
           </div>
 
           <div className="flex justify-end gap-2 sm:col-span-2">

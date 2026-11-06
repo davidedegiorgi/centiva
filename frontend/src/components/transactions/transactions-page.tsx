@@ -53,13 +53,7 @@ function formatDate(date: string): string {
 }
 
 function primaryText(transaction: Transaction): string {
-  if (transaction.source !== 'manual' && transaction.category) return transaction.category
-  return transaction.merchant?.trim() || transaction.description.trim() || 'Movimento'
-}
-
-function secondaryText(transaction: Transaction): string | null {
-  if (transaction.source !== 'manual') return transaction.notes?.trim() || null
-  return transaction.notes?.trim() || transaction.category?.trim() || null
+  return transaction.category?.trim() || 'Altro'
 }
 
 function needsReview(transaction: Transaction): boolean {
@@ -160,7 +154,7 @@ export function TransactionsPage() {
 
   async function handleDelete(transaction: Transaction) {
     const confirmed = window.confirm(
-      `Eliminare definitivamente “${transaction.description}”?`,
+      `Eliminare definitivamente questa transazione in “${primaryText(transaction)}”?`,
     )
 
     if (!confirmed) {
@@ -234,7 +228,7 @@ export function TransactionsPage() {
                 <Input
                   id="transaction-search"
                   className="pl-9"
-                  placeholder="Descrizione, esercente o categoria"
+                  placeholder="Cerca per categoria"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
@@ -359,7 +353,6 @@ export function TransactionsPage() {
                           </span>
                           <div className="min-w-0">
                             <p className="truncate font-medium text-foreground">{primaryText(transaction)}</p>
-                            {transaction.notes && <p className="truncate text-xs text-muted-foreground">{transaction.notes}</p>}
                           </div>
                         </div>
                       </td>
@@ -401,7 +394,7 @@ export function TransactionsPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium text-foreground">{primaryText(transaction)}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {formatDate(transaction.occurred_on)}{secondaryText(transaction) ? ` · ${secondaryText(transaction)}` : ''}
+                        {formatDate(transaction.occurred_on)}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {!transaction.category && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">Senza categoria</span>}

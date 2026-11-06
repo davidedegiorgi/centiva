@@ -13,12 +13,8 @@ function money(value: string, currency: string) {
 }
 
 function TransactionLine({ transaction, currency }: { transaction: Transaction; currency: string }) {
-  const title = transaction.source === 'manual'
-    ? transaction.merchant || transaction.description
-    : transaction.category || 'Altro'
-  const metadata = transaction.source === 'manual'
-    ? `${new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString('it-IT')} · ${transaction.category || 'Senza categoria'}`
-    : new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString('it-IT')
+  const title = transaction.category || 'Altro'
+  const metadata = new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString('it-IT')
 
   return (
     <div className="flex items-center justify-between gap-4 border-t border-white/10 py-3 first:border-0 first:pt-0">
@@ -82,7 +78,7 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
           </section>
 
           <aside className="space-y-5">
-            <Card className="border-white/10 bg-card"><CardHeader><CardTitle className="flex items-center gap-2"><Copy className="size-4 text-amber-400" /> Possibili duplicati</CardTitle><CardDescription>Stessa data, importo ed esercente: verifica prima di eliminare.</CardDescription></CardHeader><CardContent>
+            <Card className="border-white/10 bg-card"><CardHeader><CardTitle className="flex items-center gap-2"><Copy className="size-4 text-amber-400" /> Possibili duplicati</CardTitle><CardDescription>Stessa data e stesso importo: verifica prima di eliminare.</CardDescription></CardHeader><CardContent>
               {duplicateStatus === 'insufficient' ? <p className="text-sm leading-6 text-muted-foreground">Dati insufficienti: servono almeno 2 spese per cercare corrispondenze.</p> : duplicateStatus === 'clear' ? <p className="text-sm leading-6 text-muted-foreground">Analisi completata: nessun possibile duplicato rilevato.</p> : data.duplicates.map((group, index) => <div key={index} className="mb-4 rounded-lg border border-white/10 p-3 last:mb-0"><p className="mb-2 text-xs text-muted-foreground">{group.reason}</p>{group.transactions.map((item) => <TransactionLine key={item.id} transaction={item} currency={data.currency} />)}</div>)}
             </CardContent></Card>
 

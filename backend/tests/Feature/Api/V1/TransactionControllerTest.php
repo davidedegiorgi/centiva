@@ -32,6 +32,10 @@ class TransactionControllerTest extends TestCase
             ->assertJsonPath('data.type', 'expense')
             ->assertJsonPath('data.amount', '125.50')
             ->assertJsonPath('data.currency', 'EUR')
+            ->assertJsonPath('data.category', 'Spesa')
+            ->assertJsonPath('data.description', 'Movimento manuale')
+            ->assertJsonPath('data.merchant', null)
+            ->assertJsonPath('data.notes', null)
             ->assertJsonPath('data.source', 'manual');
 
         $transaction = Transaction::query()->firstOrFail();
@@ -52,7 +56,7 @@ class TransactionControllerTest extends TestCase
             ->assertJsonPath('errors.type.0', 'Il tipo di transazione è obbligatorio.')
             ->assertJsonPath('errors.amount.0', "L'importo è obbligatorio.")
             ->assertJsonPath('errors.occurred_on.0', 'La data è obbligatoria.')
-            ->assertJsonPath('errors.description.0', 'La descrizione è obbligatoria.');
+            ->assertJsonPath('errors.category.0', 'La categoria è obbligatoria.');
 
         $this->assertDatabaseCount('transactions', 0);
     }
@@ -188,12 +192,11 @@ class TransactionControllerTest extends TestCase
         $user = User::factory()->create();
         $transaction = Transaction::factory()->for($user)->create([
             'source' => TransactionSource::Csv,
+            'description' => 'Movimento importato originale',
+            'merchant' => 'Esercente importato',
+            'notes' => 'Nota importata',
         ]);
-        $payload = [
-            ...$this->validPayload(),
-            'description' => 'Descrizione aggiornata',
-            'amount' => 89.90,
-        ];
+        $payload = [...$this->validPayload(), 'amount' => 89.90];
 
         $response = $this->actingAs($user)->patchJson(
             "/api/v1/transactions/{$transaction->id}",
@@ -202,15 +205,48 @@ class TransactionControllerTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('data.description', 'Descrizione aggiornata')
+            ->assertJsonPath('data.description', 'Movimento importato originale')
+            ->assertJsonPath('data.merchant', 'Esercente importato')
+            ->assertJsonPath('data.notes', 'Nota importata')
             ->assertJsonPath('data.amount', '89.90')
             ->assertJsonPath('data.source', 'csv');
 
         $this->assertDatabaseHas('transactions', [
             'id' => $transaction->id,
             'user_id' => $user->id,
-            'description' => 'Descrizione aggiornata',
+            'description' => 'Movimento importato originale',
+            'merchant' => 'Esercente importato',
+            'notes' => 'Nota importata',
             'source' => 'csv',
+        ]);
+    }
+
+    public function test_updating_manual_transaction_removes_legacy_hidden_fields(): void
+    {
+        $user = User::factory()->create();
+        $transaction = Transaction::factory()->for($user)->create([
+            'source' => TransactionSource::Manual,
+            'description' => 'Vecchia descrizione',
+            'merchant' => 'Vecchio esercente',
+            'notes' => 'Vecchia nota',
+        ]);
+
+        $response = $this->actingAs($user)->patchJson(
+            "/api/v1/transactions/{$transaction->id}",
+            $this->validPayload(),
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.description', 'Movimento manuale')
+            ->assertJsonPath('data.merchant', null)
+            ->assertJsonPath('data.notes', null);
+
+        $this->assertDatabaseHas('transactions', [
+            'id' => $transaction->id,
+            'description' => 'Movimento manuale',
+            'merchant' => null,
+            'notes' => null,
         ]);
     }
 
@@ -235,10 +271,7 @@ class TransactionControllerTest extends TestCase
             'amount' => 125.50,
             'currency' => 'eur',
             'occurred_on' => '2026-10-20',
-            'description' => 'Spesa alimentare',
-            'merchant' => 'Mercato Centrale',
             'category' => 'Spesa',
-            'notes' => 'Acquisto settimanale',
         ];
     }
 }

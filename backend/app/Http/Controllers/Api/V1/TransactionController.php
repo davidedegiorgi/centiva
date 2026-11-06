@@ -73,12 +73,12 @@ class TransactionController extends Controller
             'amount',
             'currency',
             'occurred_on',
-            'description',
-            'merchant',
             'category',
-            'notes',
         ]);
         $attributes['source'] = TransactionSource::Manual;
+        $attributes['description'] = 'Movimento manuale';
+        $attributes['merchant'] = null;
+        $attributes['notes'] = null;
 
         $transaction = $request->user()->transactions()->create($attributes);
 
@@ -96,16 +96,21 @@ class TransactionController extends Controller
         UpdateTransactionRequest $request,
         Transaction $transaction,
     ): JsonResponse {
-        $transaction->update($request->safe()->only([
+        $attributes = $request->safe()->only([
             'type',
             'amount',
             'currency',
             'occurred_on',
-            'description',
-            'merchant',
             'category',
-            'notes',
-        ]));
+        ]);
+
+        if ($transaction->source === TransactionSource::Manual) {
+            $attributes['description'] = 'Movimento manuale';
+            $attributes['merchant'] = null;
+            $attributes['notes'] = null;
+        }
+
+        $transaction->update($attributes);
 
         return (new TransactionResource($transaction->refresh()))->response();
     }

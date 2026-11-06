@@ -30,10 +30,7 @@ class StoreTransactionRequest extends FormRequest
             'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:999999999999.99'],
             'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'occurred_on' => ['required', 'date'],
-            'description' => ['required', 'string', 'max:255'],
-            'merchant' => ['nullable', 'string', 'max:160'],
-            'category' => ['nullable', 'string', 'max:100'],
-            'notes' => ['nullable', 'string', 'max:2000'],
+            'category' => ['required', 'string', 'max:100'],
         ];
     }
 
@@ -50,7 +47,7 @@ class StoreTransactionRequest extends FormRequest
             'currency.regex' => 'La valuta deve essere un codice ISO di tre lettere.',
             'occurred_on.required' => 'La data è obbligatoria.',
             'occurred_on.date' => 'La data non è valida.',
-            'description.required' => 'La descrizione è obbligatoria.',
+            'category.required' => 'La categoria è obbligatoria.',
         ];
     }
 

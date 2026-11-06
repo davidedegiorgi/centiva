@@ -21,10 +21,7 @@ export interface TransactionPayload {
   amount: number
   currency: string
   occurred_on: string
-  description: string
-  merchant: string | null
-  category: string | null
-  notes: string | null
+  category: string
 }
 
 export interface TransactionFilters {
