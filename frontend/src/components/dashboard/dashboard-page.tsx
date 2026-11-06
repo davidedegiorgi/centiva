@@ -52,7 +52,7 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
 
   useEffect(() => {
     let isMounted = true
-    dashboardApi.show(currency).then((response) => {
+    const loadDashboard = () => dashboardApi.show(currency).then((response) => {
       if (isMounted) {
         setDashboard(response.data)
         setError(null)
@@ -62,7 +62,12 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
     }).finally(() => {
       if (isMounted) setIsLoading(false)
     })
-    return () => { isMounted = false }
+    void loadDashboard()
+    window.addEventListener('centiva:transactions-changed', loadDashboard)
+    return () => {
+      isMounted = false
+      window.removeEventListener('centiva:transactions-changed', loadDashboard)
+    }
   }, [currency])
 
   function changeCurrency(nextCurrency: string) {

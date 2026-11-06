@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Copy, Lightbulb, ListMinus, LoaderCircle, SearchCheck, TrendingDown } from 'lucide-react'
+import { AlertTriangle, ChartNoAxesCombined, Copy, Lightbulb, ListMinus, LoaderCircle, SearchCheck, Tags, TrendingDown, TrendingUp } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,10 @@ import type { Transaction } from '@/types/transaction'
 
 function money(value: string, currency: string) {
   return new Intl.NumberFormat('it-IT', { style: 'currency', currency }).format(Number(value))
+}
+
+function shortDate(value: string) {
+  return new Date(`${value}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
 }
 
 function TransactionLine({ transaction, currency }: { transaction: Transaction; currency: string }) {
@@ -37,7 +42,23 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    analysisApi.show().then((response) => setData(response.data)).catch((caught) => setError(caught instanceof ApiError ? caught.message : 'Analisi non disponibile.')).finally(() => setLoading(false))
+    let isMounted = true
+    const loadAnalysis = () => analysisApi.show().then((response) => {
+      if (isMounted) {
+        setData(response.data)
+        setError(null)
+      }
+    }).catch((caught) => {
+      if (isMounted) setError(caught instanceof ApiError ? caught.message : 'Analisi non disponibile.')
+    }).finally(() => {
+      if (isMounted) setLoading(false)
+    })
+    void loadAnalysis()
+    window.addEventListener('centiva:transactions-changed', loadAnalysis)
+    return () => {
+      isMounted = false
+      window.removeEventListener('centiva:transactions-changed', loadAnalysis)
+    }
   }, [])
 
   if (loading) return <main className="grid min-h-[60vh] place-items-center"><LoaderCircle className="size-6 animate-spin text-emerald-300" aria-label="Analisi in corso" /></main>
@@ -46,6 +67,8 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
   const duplicateStatus = data?.status?.duplicates ?? (data && data.duplicates.length > 0 ? 'findings' : data && data.sample_size >= 2 ? 'clear' : 'insufficient')
   const anomalyStatus = data?.status?.anomalies ?? (data && data.anomalies.length > 0 ? 'findings' : data && data.sample_size >= 5 ? 'clear' : 'insufficient')
   const categorizedExpenseCount = data?.data_quality?.current_categorized_expenses ?? 0
+  const change = data?.summary?.change_percentage ?? null
+  const hasCategoryChart = (data?.categories.length ?? 0) >= 2
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 lg:py-10">
@@ -62,7 +85,33 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
       )}
 
       {data && data.sample_size > 0 && (
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-6">
+          <section className="grid gap-4 md:grid-cols-3" aria-label="Riepilogo analisi">
+            <Card className="border-white/10 bg-card"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Uscite del periodo</p><p className="mt-3 font-data text-3xl font-semibold tracking-tight text-foreground">{money(data.summary.current_expenses, data.currency)}</p><p className="mt-2 text-xs text-muted-foreground">Dal {shortDate(data.period.from)} al {shortDate(data.period.to)}</p></CardContent></Card>
+            <Card className="border-white/10 bg-card"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Confronto precedente</p><div className="mt-3 flex items-center gap-2">{change === null ? <ChartNoAxesCombined className="size-5 text-zinc-500" /> : change > 0 ? <TrendingUp className="size-5 text-rose-300" /> : <TrendingDown className="size-5 text-emerald-300" />}<p className={`font-data text-3xl font-semibold tracking-tight ${change === null ? 'text-foreground' : change > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>{change === null ? '—' : `${change > 0 ? '+' : ''}${change.toLocaleString('it-IT')}%`}</p></div><p className="mt-2 text-xs text-muted-foreground">{change === null ? 'Serve lo stesso periodo del mese precedente.' : `${money(data.summary.previous_comparable_expenses, data.currency)} nello stesso intervallo precedente.`}</p></CardContent></Card>
+            <Card className="border-white/10 bg-card"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Copertura categorie</p><p className="mt-3 font-data text-3xl font-semibold tracking-tight text-foreground">{data.summary.category_coverage_percentage.toLocaleString('it-IT')}%</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(100, data.summary.category_coverage_percentage)}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{categorizedExpenseCount} spese categorizzate nel mese.</p></CardContent></Card>
+          </section>
+
+          <section className="grid gap-5 lg:grid-cols-3">
+            <Card className="border-white/10 bg-card lg:col-span-2">
+              <CardHeader><CardTitle className="flex items-center gap-2"><Tags className="size-5 text-emerald-300" /> Distribuzione per categoria</CardTitle><CardDescription>Solo spese del mese con una categoria assegnata.</CardDescription></CardHeader>
+              <CardContent>
+                {hasCategoryChart ? (
+                  <div className="h-72 w-full" aria-label="Grafico delle spese per categoria">
+                    <ResponsiveContainer width="100%" height="100%"><BarChart data={data.categories} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}><CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} /><XAxis dataKey="category" stroke="#71717a" tickLine={false} axisLine={false} fontSize={11} /><YAxis stroke="#71717a" tickLine={false} axisLine={false} fontSize={11} /><Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: '#0c110e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }} formatter={(value) => money(String(value), data.currency)} /><Bar dataKey="amount" fill="#34d399" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer>
+                  </div>
+                ) : data.categories.length === 1 ? (
+                  <div className="rounded-xl border border-white/10 p-4"><div className="flex items-center justify-between gap-4"><div><p className="font-medium">{data.categories[0].category}</p><p className="text-xs text-muted-foreground">{data.categories[0].transaction_count} movimenti categorizzati</p></div><p className="font-data text-lg text-emerald-300">{money(data.categories[0].amount, data.currency)}</p></div><p className="mt-4 text-sm text-muted-foreground">Il grafico comparativo apparirà quando saranno presenti almeno due categorie.</p></div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-muted-foreground">Assegna una categoria alle spese per visualizzare la distribuzione.</div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/10 bg-card"><CardHeader><CardTitle>Categorie principali</CardTitle><CardDescription>Incidenza sulle spese categorizzate.</CardDescription></CardHeader><CardContent className="space-y-4">{data.categories.length === 0 ? <p className="text-sm text-muted-foreground">Nessuna categoria disponibile.</p> : data.categories.slice(0, 5).map((item) => <div key={item.category}><div className="flex items-center justify-between gap-3 text-sm"><span className="truncate text-foreground">{item.category}</span><span className="font-data text-emerald-300">{item.percentage.toLocaleString('it-IT')}%</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-emerald-400/80" style={{ width: `${item.percentage}%` }} /></div></div>)}</CardContent></Card>
+          </section>
+
+          <div className="grid gap-5 lg:grid-cols-3">
           <section className="space-y-4 lg:col-span-2">
             <h2 className="text-lg font-semibold text-foreground">Osservazioni motivate</h2>
             {insightStatus === 'insufficient' ? (
@@ -86,6 +135,7 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
               {anomalyStatus === 'insufficient' ? <p className="text-sm leading-6 text-muted-foreground">Dati insufficienti: servono almeno 5 spese per calcolare una soglia personale.</p> : anomalyStatus === 'clear' ? <p className="text-sm leading-6 text-muted-foreground">Analisi completata: nessuna anomalia rilevata.</p> : data.anomalies.map((item) => <div key={item.transaction.id}><p className="text-xs text-muted-foreground">{item.reason}</p><TransactionLine transaction={item.transaction} currency={data.currency} /></div>)}
             </CardContent></Card>
           </aside>
+          </div>
         </div>
       )}
     </main>

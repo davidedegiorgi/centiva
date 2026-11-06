@@ -4,10 +4,7 @@ import { LoaderCircle } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { AppShell, type AppView } from '@/components/layout/app-shell'
 import { ApiError, authApi } from '@/lib/api'
-import {
-  getAuthenticatedStartupView,
-  shouldShowImmediateCamera,
-} from '@/lib/startup-view'
+import { getAuthenticatedStartupView } from '@/lib/startup-view'
 import type { User } from '@/types/auth'
 
 type TransitionDocument = Document & {
@@ -31,7 +28,6 @@ function PageLoader() {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [hasAuthHint, setHasAuthHint] = useState(() => window.localStorage.getItem('centiva.authenticated') === '1')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [activeView, setActiveView] = useState<AppView>('dashboard')
   const [isGoogleAuthenticationReturn] = useState(
@@ -70,12 +66,8 @@ function App() {
       .profile()
       .then((response) => {
         if (isMounted) {
-          const initialView = getAuthenticatedStartupView({
-            isMobile,
-            isGoogleAuthenticationReturn,
-          })
+          const initialView = getAuthenticatedStartupView()
           window.localStorage.setItem('centiva.authenticated', '1')
-          setHasAuthHint(true)
           setUser(response.data)
           setActiveView(initialView)
         }
@@ -83,7 +75,6 @@ function App() {
       .catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 401) {
           window.localStorage.removeItem('centiva.authenticated')
-          setHasAuthHint(false)
         }
         if (!(error instanceof ApiError && error.status === 401)) {
           console.error('Impossibile verificare la sessione.', error)
@@ -106,7 +97,6 @@ function App() {
     try {
       await authApi.logout()
       window.localStorage.removeItem('centiva.authenticated')
-      setHasAuthHint(false)
       setUser(null)
       setActiveView('dashboard')
     } catch (error) {
@@ -118,21 +108,14 @@ function App() {
 
   function handleAccountDeleted() {
     window.localStorage.removeItem('centiva.authenticated')
-    setHasAuthHint(false)
     setUser(null)
     setActiveView('dashboard')
   }
 
-  const showImmediateCamera = shouldShowImmediateCamera({
-    isLoading,
-    hasAuthenticationHint: hasAuthHint,
-    isMobile: window.matchMedia('(max-width: 767px)').matches,
-    isGoogleAuthenticationReturn,
-  })
   const showAuthenticatedCamera = !isLoading && user !== null && activeView === 'capture'
 
-  if (showImmediateCamera || showAuthenticatedCamera) {
-    return <Suspense fallback={<PageLoader />}><MobileCapturePage sessionReady={showAuthenticatedCamera} onEnterApp={() => { if (user) setActiveView('dashboard') }} /></Suspense>
+  if (showAuthenticatedCamera) {
+    return <Suspense fallback={<PageLoader />}><MobileCapturePage /></Suspense>
   }
 
   if (isLoading) {
@@ -151,7 +134,6 @@ function App() {
       <Suspense fallback={<PageLoader />}><AuthForm
         onAuthenticated={(authenticatedUser) => {
           window.localStorage.setItem('centiva.authenticated', '1')
-          setHasAuthHint(true)
           setUser(authenticatedUser)
           setActiveView('dashboard')
         }}

@@ -24,6 +24,9 @@ class AnalysisControllerTest extends TestCase
             ->assertOk()->assertJsonCount(0, 'data.insights')
             ->assertJsonCount(0, 'data.duplicates')->assertJsonCount(0, 'data.anomalies')
             ->assertJsonPath('data.sample_size', 0)
+            ->assertJsonPath('data.summary.current_expenses', '0.00')
+            ->assertJsonPath('data.summary.change_percentage', null)
+            ->assertJsonCount(0, 'data.categories')
             ->assertJsonPath('data.status.insights', 'insufficient')
             ->assertJsonPath('data.status.duplicates', 'insufficient')
             ->assertJsonPath('data.status.anomalies', 'insufficient');
@@ -62,6 +65,47 @@ class AnalysisControllerTest extends TestCase
             ->assertJsonPath('data.status.insights', 'ready')
             ->assertJsonPath('data.insights.0.title', 'La categoria principale è Spesa')
             ->assertJsonPath('data.insights.0.potential_saving', '0.00');
+    }
+
+    public function test_analysis_returns_real_month_summary_and_category_distribution(): void
+    {
+        $this->travelTo('2026-11-20 12:00:00');
+        $user = User::factory()->create();
+        Transaction::factory()->expense()->for($user)->create([
+            'amount' => 60,
+            'occurred_on' => '2026-11-10',
+            'category' => 'Spesa',
+        ]);
+        Transaction::factory()->expense()->for($user)->create([
+            'amount' => 40,
+            'occurred_on' => '2026-11-12',
+            'category' => 'Casa',
+        ]);
+        Transaction::factory()->expense()->for($user)->create([
+            'amount' => 20,
+            'occurred_on' => '2026-11-15',
+            'category' => null,
+        ]);
+        Transaction::factory()->expense()->for($user)->create([
+            'amount' => 80,
+            'occurred_on' => '2026-10-12',
+            'category' => 'Spesa',
+        ]);
+
+        $this->actingAs($user)->getJson('/api/v1/analysis')
+            ->assertOk()
+            ->assertJsonPath('data.period.from', '2026-11-01')
+            ->assertJsonPath('data.period.to', '2026-11-20')
+            ->assertJsonPath('data.summary.current_expenses', '120.00')
+            ->assertJsonPath('data.summary.previous_comparable_expenses', '80.00')
+            ->assertJsonPath('data.summary.change_percentage', 50)
+            ->assertJsonPath('data.summary.categorized_expenses', '100.00')
+            ->assertJsonPath('data.summary.category_coverage_percentage', 83.3)
+            ->assertJsonCount(2, 'data.categories')
+            ->assertJsonPath('data.categories.0.category', 'Spesa')
+            ->assertJsonPath('data.categories.0.amount', '60.00')
+            ->assertJsonPath('data.categories.0.percentage', 60)
+            ->assertJsonPath('data.categories.0.transaction_count', 1);
     }
 
     public function test_anomaly_status_reports_insufficient_data_below_five_expenses(): void

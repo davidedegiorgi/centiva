@@ -31,6 +31,24 @@ class AnalysisController extends Controller
         $current = $expenses->filter(fn (Transaction $item): bool => $item->occurred_on->between($currentStart, $now));
         $previous = $expenses->filter(fn (Transaction $item): bool => $item->occurred_on->between($previousStart, $previousEnd));
         $categorizedCurrent = $current->filter(fn (Transaction $item): bool => filled($item->category));
+        $currentTotal = round((float) $current->sum('amount'), 2);
+        $previousTotal = round((float) $previous->sum('amount'), 2);
+        $categorizedTotal = round((float) $categorizedCurrent->sum('amount'), 2);
+        $categories = $categorizedCurrent
+            ->groupBy(fn (Transaction $item): string => (string) $item->category)
+            ->map(function (Collection $items, string $category) use ($categorizedTotal): array {
+                $amount = round((float) $items->sum('amount'), 2);
+
+                return [
+                    'category' => $category,
+                    'amount' => number_format($amount, 2, '.', ''),
+                    'percentage' => round($categorizedTotal > 0 ? $amount / $categorizedTotal * 100 : 0, 1),
+                    'transaction_count' => $items->count(),
+                ];
+            })
+            ->sortByDesc(fn (array $item): float => (float) $item['amount'])
+            ->values()
+            ->all();
         $duplicates = $this->duplicates($expenses, $request);
         $anomalies = $this->anomalies($expenses, $request);
 
@@ -40,6 +58,24 @@ class AnalysisController extends Controller
             'duplicates' => $duplicates,
             'anomalies' => $anomalies,
             'sample_size' => $expenses->count(),
+            'period' => [
+                'from' => $currentStart->toDateString(),
+                'to' => $now->toDateString(),
+                'previous_from' => $previousStart->toDateString(),
+                'previous_to' => $previousEnd->toDateString(),
+            ],
+            'summary' => [
+                'current_expenses' => number_format($currentTotal, 2, '.', ''),
+                'previous_comparable_expenses' => number_format($previousTotal, 2, '.', ''),
+                'change_percentage' => $previousTotal > 0
+                    ? round((($currentTotal - $previousTotal) / $previousTotal) * 100, 1)
+                    : null,
+                'categorized_expenses' => number_format($categorizedTotal, 2, '.', ''),
+                'category_coverage_percentage' => $currentTotal > 0
+                    ? round($categorizedTotal / $currentTotal * 100, 1)
+                    : 0,
+            ],
+            'categories' => $categories,
             'data_quality' => [
                 'current_expenses' => $current->count(),
                 'current_categorized_expenses' => $categorizedCurrent->count(),

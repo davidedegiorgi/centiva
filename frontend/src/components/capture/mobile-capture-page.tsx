@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ArrowRight, Camera, Check, Images, LoaderCircle } from 'lucide-react'
+import { AlertTriangle, Camera, Check, Images, LoaderCircle } from 'lucide-react'
 
 import { LiquidNumber } from '@/components/effects/liquid-number'
-import { Button } from '@/components/ui/button'
 import { dashboardApi, transactionApi } from '@/lib/api'
 import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
@@ -49,12 +48,7 @@ function scheduleCameraRelease(): void {
   cameraReleaseTimer = window.setTimeout(stopSharedCamera, CAMERA_RELEASE_DELAY)
 }
 
-interface MobileCapturePageProps {
-  onEnterApp: () => void
-  sessionReady?: boolean
-}
-
-export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCapturePageProps) {
+export function MobileCapturePage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -120,17 +114,14 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
   }, [startCamera])
 
   useEffect(() => {
-    if (!sessionReady) return
-
     void dashboardApi.show().then(({ data }) => {
       setMonthlySavings(Number(data.summary.net_savings))
       setIncome(Number(data.summary.income))
       setExpenses(Number(data.summary.expenses))
     }).catch(() => setError('Non è stato possibile caricare il riepilogo mensile.'))
-  }, [sessionReady])
+  }, [])
 
   async function analyzeImage(image: File | HTMLCanvasElement) {
-    if (!sessionReady) return
     setError(null)
     setIsScanning(true)
     setProgress(0)
@@ -223,7 +214,7 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
         {isScanning && <span className="camera-scan-line absolute inset-x-0 h-px bg-emerald-200 shadow-[0_0_18px_3px_rgba(52,211,153,0.65)]" />}
       </div>
 
-      <header className="relative z-10 flex items-start justify-between gap-4 p-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
+      <header className="relative z-10 flex items-start p-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
         <div className={`rounded-2xl border border-white/15 bg-black/45 px-4 py-3 backdrop-blur-xl transition-transform duration-700 ${savingsEffect ? 'scale-105 border-emerald-300/50' : ''}`}>
           <p className="font-data text-[0.6rem] uppercase tracking-[0.2em] text-white/55">Risultato del mese</p>
           <LiquidNumber value={monthlySavings} currency="EUR" className="mt-1 block text-2xl font-bold tracking-tighter" />
@@ -232,9 +223,6 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
             <span className="text-rose-300">−{expenses.toFixed(2)} €</span>
           </div>
         </div>
-        <Button className="h-10 border-white/15 bg-black/45 text-white backdrop-blur-xl hover:bg-white/15 hover:text-white" variant="outline" disabled={!sessionReady} onClick={onEnterApp}>
-          {sessionReady ? 'Entra nell’app' : 'Connessione…'} <ArrowRight />
-        </Button>
       </header>
 
       <div className="absolute inset-x-5 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col items-center gap-4">
@@ -253,10 +241,10 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
         )}
 
         <div className="grid grid-cols-[3rem_5rem_3rem] items-center gap-4">
-          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Apri foto o file" disabled={!sessionReady || isScanning} onClick={() => fileInputRef.current?.click()}>
+          <button className="grid size-12 place-items-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-xl" type="button" aria-label="Apri foto o file" disabled={isScanning} onClick={() => fileInputRef.current?.click()}>
             <Images className="size-5" />
           </button>
-          <button className="grid size-20 place-items-center rounded-full border-[5px] border-white bg-white/20 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform active:scale-90 disabled:opacity-50" type="button" aria-label="Scatta e analizza" disabled={!sessionReady || !cameraReady || isScanning} onClick={() => void capturePhoto()}>
+          <button className="grid size-20 place-items-center rounded-full border-[5px] border-white bg-white/20 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform active:scale-90 disabled:opacity-50" type="button" aria-label="Scatta e analizza" disabled={!cameraReady || isScanning} onClick={() => void capturePhoto()}>
             {isScanning ? <LoaderCircle className="size-7 animate-spin" /> : <Camera className="size-7" />}
           </button>
           <span className="size-12" aria-hidden="true" />
