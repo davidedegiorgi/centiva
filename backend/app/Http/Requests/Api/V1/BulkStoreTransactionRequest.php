@@ -45,7 +45,7 @@ class BulkStoreTransactionRequest extends FormRequest
             'transactions.*.occurred_on' => ['required', 'date'],
             'transactions.*.description' => ['required', 'string', 'max:255'],
             'transactions.*.merchant' => ['nullable', 'string', 'max:160'],
-            'transactions.*.category' => ['nullable', 'string', 'max:100'],
+            'transactions.*.category' => ['required', 'string', 'max:100'],
             'transactions.*.notes' => ['nullable', 'string', 'max:2000'],
             'transactions.*.source' => [
                 'required',
@@ -79,11 +79,19 @@ class BulkStoreTransactionRequest extends FormRequest
 
         $this->merge([
             'transactions' => array_map(function (mixed $transaction): mixed {
-                if (! is_array($transaction) || ! isset($transaction['currency'])) {
+                if (! is_array($transaction)) {
                     return $transaction;
                 }
 
-                $transaction['currency'] = Str::upper((string) $transaction['currency']);
+                if (isset($transaction['currency'])) {
+                    $transaction['currency'] = Str::upper((string) $transaction['currency']);
+                }
+                if (blank($transaction['category'] ?? null)) {
+                    $transaction['category'] = 'Altro';
+                }
+                if (blank($transaction['description'] ?? null)) {
+                    $transaction['description'] = 'Movimento importato';
+                }
 
                 return $transaction;
             }, $transactions),

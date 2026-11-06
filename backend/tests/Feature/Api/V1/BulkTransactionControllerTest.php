@@ -37,6 +37,7 @@ class BulkTransactionControllerTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Spesa importata',
             'currency' => 'EUR',
+            'category' => 'Altro',
         ]);
     }
 

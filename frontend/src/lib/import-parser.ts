@@ -94,22 +94,65 @@ function detectType(type: string, amount: number): 'income' | 'expense' {
     : 'expense'
 }
 
+export const IMPORT_CATEGORIES = [
+  'Abbonamenti', 'Acquisti', 'Altro', 'Assicurazioni', 'Bonifico ricevuto',
+  'Casa', 'Commissioni', 'Cura personale', 'Entrate', 'Istruzione', 'Pensione',
+  'Prelievi', 'Rimborso', 'Ristorazione', 'Salute', 'Spesa', 'Stipendio',
+  'Tempo libero', 'Trasporti', 'Utenze', 'Viaggi',
+] as const
+
+type CategoryRule = [category: string, keywords: string[]]
+
+function searchableText(value: string): { words: string; compact: string } {
+  const words = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+  return { words, compact: words.replace(/\s/g, '') }
+}
+
+function matchesKeyword(text: { words: string; compact: string }, keyword: string): boolean {
+  const keywordText = searchableText(keyword)
+  if (keywordText.compact.length <= 3) {
+    return ` ${text.words} `.includes(` ${keywordText.words} `)
+  }
+
+  return text.compact.includes(keywordText.compact)
+}
+
 export function suggestCategory(text: string, type: 'income' | 'expense' = 'expense'): string {
-  if (type === 'income') return 'Entrate'
+  const value = searchableText(text)
 
-  const value = normalized(text)
-  const categories: Array<[string, string[]]> = [
-    ['Spesa', ['supermercato', 'conad', 'coop', 'esselunga', 'lidl', 'alimentari']],
-    ['Ristorazione', ['ristorante', 'pizzeria', 'bar', 'caffe', 'deliveroo', 'justeat']],
-    ['Trasporti', ['benzina', 'carburante', 'eni', 'q8', 'trenitalia', 'atm', 'autostrade']],
-    ['Abbonamenti', ['netflix', 'spotify', 'disney', 'primevideo', 'icloud', 'abbonamento']],
-    ['Casa', ['enel', 'energia', 'gas', 'affitto', 'condominio', 'ikea']],
-    ['Salute', ['farmacia', 'medico', 'dentista', 'sanitaria']],
-    ['Acquisti', ['amazon', 'zalando', 'negozio', 'shopping']],
-    ['Tempo libero', ['cinema', 'teatro', 'museo', 'ticketone']],
+  const incomeCategories: CategoryRule[] = [
+    ['Stipendio', ['stipendio', 'salary', 'paghe', 'retribuzione', 'emolumenti']],
+    ['Pensione', ['pensione', 'inps']],
+    ['Rimborso', ['rimborso', 'cashback', 'storno', 'refund']],
+    ['Bonifico ricevuto', ['bonifico', 'stripe', 'accredito', 'giroconto']],
   ]
+  const expenseCategories: CategoryRule[] = [
+    ['Prelievi', ['prelievo', 'cash withdrawal', 'sportello atm']],
+    ['Commissioni', ['commissione', 'canone carta', 'imposta di bollo', 'spese bancarie']],
+    ['Abbonamenti', ['amazon prime', 'prime video', 'netflix', 'spotify', 'disney plus', 'dazn', 'sky', 'now tv', 'apple.com/bill', 'icloud', 'google one', 'youtube premium', 'chatgpt', 'openai', 'microsoft 365', 'adobe', 'canva', 'abbonamento']],
+    ['Spesa', ['supermercato', 'alimentari', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros']],
+    ['Ristorazione', ['ristorante', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
+    ['Trasporti', ['trenitalia', 'italo treno', 'biglietto treno', 'metro', 'autobus', 'trasporto', 'taxi', 'uber', 'freenow', 'telepass', 'autostrade', 'parcheggio', 'benzina', 'carburante', 'distributore', 'eni station', 'q8', 'tamoil', 'ip gruppo api', 'atm milano']],
+    ['Utenze', ['bolletta', 'energia', 'elettricita', 'luce e gas', 'enel', 'a2a', 'hera', 'iren', 'acea', 'telefono', 'telefonia', 'vodafone', 'tim', 'windtre', 'iliad', 'fastweb', 'internet fibra']],
+    ['Casa', ['affitto', 'condominio', 'mutuo', 'ikea', 'leroy merlin', 'brico', 'mobilificio', 'ferramenta']],
+    ['Salute', ['farmacia', 'parafarmacia', 'medico', 'dentista', 'clinica', 'ospedale', 'sanitaria', 'ottica', 'laboratorio analisi']],
+    ['Assicurazioni', ['assicurazione', 'polizza', 'unipol', 'generali', 'allianz', 'axa', 'zurich']],
+    ['Viaggi', ['hotel', 'albergo', 'booking.com', 'airbnb', 'ryanair', 'easyjet', 'ita airways', 'compagnia aerea', 'volo', 'agenzia viaggi']],
+    ['Istruzione', ['scuola', 'universita', 'corso', 'udemy', 'coursera', 'libreria', 'libro scolastico']],
+    ['Cura personale', ['parrucchiere', 'barbiere', 'estetista', 'profumeria', 'sephora', 'douglas']],
+    ['Tempo libero', ['cinema', 'teatro', 'museo', 'concerto', 'ticketone', 'videogioco', 'playstation', 'steam', 'palestra']],
+    ['Acquisti', ['amazon', 'zalando', 'ebay', 'shein', 'temu', 'negozio', 'shopping', 'abbigliamento', 'zara', 'hm.com', 'decathlon', 'mediaworld', 'unieuro', 'apple store']],
+  ]
+  const rules = type === 'income' ? incomeCategories : expenseCategories
 
-  return categories.find(([, keywords]) => keywords.some((keyword) => value.includes(keyword)))?.[0] ?? ''
+  return rules.find(([, keywords]) => keywords.some((keyword) => matchesKeyword(value, keyword)))?.[0]
+    ?? (type === 'income' ? 'Entrate' : 'Altro')
 }
 
 function draftFromRow(row: CsvRow, index: number): ImportDraft | null {
@@ -252,7 +295,7 @@ export function parseOcrText(text: string): ImportDraft[] {
     }))
 
     entries.forEach(({ candidate, relativeIndex }) => {
-      const contextLines = blockLines.slice(Math.max(0, relativeIndex - 2), Math.min(blockLines.length, relativeIndex + 2))
+      const contextLines = blockLines.slice(Math.max(0, relativeIndex - 3), relativeIndex + 1)
       const context = contextLines.join(' | ')
       const signedExpense = /-/.test(candidate.raw) || /addebito|pagamento|prelievo|uscita/i.test(context)
       const type = !signedExpense && /\+|accredito|entrata|rimborso/i.test(context) ? 'income' : 'expense'
@@ -265,7 +308,7 @@ export function parseOcrText(text: string): ImportDraft[] {
         occurred_on: parseDate(date),
         description: description || 'Movimento rilevato da immagine',
         merchant: '',
-        category: suggestCategory(description, type),
+        category: suggestCategory(`${context} ${description}`, type),
         notes: '',
         source: 'ocr',
       })
@@ -289,7 +332,7 @@ export function parseOcrText(text: string): ImportDraft[] {
     occurred_on: new Date().toISOString().slice(0, 10),
     description: merchant ? `Acquisto presso ${merchant}` : 'Spesa rilevata da immagine',
     merchant,
-    category: suggestCategory(`${merchant} ${fallbackLine}`),
+    category: suggestCategory(text),
     notes: '',
     source: 'ocr',
   }]

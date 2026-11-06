@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ReceiptMonolith } from '@/components/effects/receipt-monolith'
 import { ApiError, transactionApi } from '@/lib/api'
-import { parseCsv, parseOcrText } from '@/lib/import-parser'
+import { IMPORT_CATEGORIES, parseCsv, parseOcrText, suggestCategory } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
 import type { ImportDraft } from '@/types/import'
 
@@ -17,8 +17,8 @@ const fieldClass = 'h-9 w-full rounded-md border border-input bg-transparent px-
 function emptyDraft(source: 'csv' | 'ocr' = 'csv'): ImportDraft {
   return {
     id: crypto.randomUUID(), type: 'expense', amount: '', currency: 'EUR',
-    occurred_on: new Date().toISOString().slice(0, 10), description: '', merchant: '',
-    category: '', notes: '', source,
+    occurred_on: new Date().toISOString().slice(0, 10), description: 'Movimento importato', merchant: '',
+    category: 'Altro', notes: '', source,
   }
 }
 
@@ -60,6 +60,14 @@ export function ImportPage() {
     setDrafts((current) => current.map((draft) => draft.id === id ? { ...draft, [field]: value } : draft))
   }
 
+  function updateType(id: string, type: ImportDraft['type']) {
+    setDrafts((current) => current.map((draft) => draft.id === id ? {
+      ...draft,
+      type,
+      category: suggestCategory(`${draft.merchant} ${draft.description}`, type),
+    } : draft))
+  }
+
   async function handleFile(file: File) {
     setError(null)
     setSuccess(null)
@@ -95,8 +103,8 @@ export function ImportPage() {
   async function save() {
     setError(null)
     setSuccess(null)
-    if (drafts.some((draft) => !draft.description.trim() || !draft.occurred_on || Number(draft.amount) <= 0 || draft.currency.length !== 3)) {
-      setError('Correggi le righe incomplete: descrizione, data, importo e valuta sono obbligatori.')
+    if (drafts.some((draft) => !draft.occurred_on || Number(draft.amount) <= 0 || draft.currency.length !== 3 || !draft.category.trim())) {
+      setError('Correggi le righe incomplete: tipo, importo, valuta, data e categoria sono obbligatori.')
       return
     }
 
@@ -108,9 +116,9 @@ export function ImportPage() {
           amount: Number(draft.amount),
           currency: draft.currency.toUpperCase(),
           occurred_on: draft.occurred_on,
-          description: draft.description.trim(),
+          description: draft.description.trim() || 'Movimento importato',
           merchant: draft.merchant.trim() || null,
-          category: draft.category.trim() || null,
+          category: draft.category.trim() || 'Altro',
           notes: draft.notes.trim() || null,
           source: draft.source,
         })),
@@ -212,14 +220,12 @@ export function ImportPage() {
                   <CardTitle className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-full bg-emerald-400/15 text-xs text-emerald-200">{index + 1}</span> Movimento</CardTitle>
                   <Button size="icon" variant="ghost" aria-label={`Elimina riga ${index + 1}`} onClick={() => setDrafts((current) => current.filter((item) => item.id !== draft.id))}><Trash2 /></Button>
                 </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <label className="grid gap-1.5 text-sm"><span>Tipo</span><select className={fieldClass} value={draft.type} onChange={(event) => update(draft.id, 'type', event.target.value)}><option value="expense">Uscita</option><option value="income">Entrata</option></select></label>
+                <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  <label className="grid gap-1.5 text-sm"><span>Tipo</span><select className={fieldClass} value={draft.type} onChange={(event) => updateType(draft.id, event.target.value as ImportDraft['type'])}><option value="expense">Uscita</option><option value="income">Entrata</option></select></label>
                   <div className="grid gap-1.5"><Label htmlFor={`amount-${draft.id}`}>Importo</Label><Input id={`amount-${draft.id}`} min="0.01" step="0.01" type="number" value={draft.amount} onChange={(event) => update(draft.id, 'amount', event.target.value)} /></div>
-                  <div className="grid gap-1.5"><Label htmlFor={`date-${draft.id}`}>Data</Label><Input id={`date-${draft.id}`} type="date" value={draft.occurred_on} onChange={(event) => update(draft.id, 'occurred_on', event.target.value)} /></div>
                   <div className="grid gap-1.5"><Label htmlFor={`currency-${draft.id}`}>Valuta</Label><Input id={`currency-${draft.id}`} maxLength={3} value={draft.currency} onChange={(event) => update(draft.id, 'currency', event.target.value.toUpperCase())} /></div>
-                  <div className="grid gap-1.5 sm:col-span-2"><Label htmlFor={`description-${draft.id}`}>Descrizione</Label><Input id={`description-${draft.id}`} value={draft.description} onChange={(event) => update(draft.id, 'description', event.target.value)} /></div>
-                  <div className="grid gap-1.5"><Label htmlFor={`merchant-${draft.id}`}>Esercente</Label><Input id={`merchant-${draft.id}`} value={draft.merchant} onChange={(event) => update(draft.id, 'merchant', event.target.value)} /></div>
-                  <div className="grid gap-1.5"><Label htmlFor={`category-${draft.id}`}>Categoria</Label><Input id={`category-${draft.id}`} value={draft.category} onChange={(event) => update(draft.id, 'category', event.target.value)} /></div>
+                  <div className="grid gap-1.5"><Label htmlFor={`date-${draft.id}`}>Data</Label><Input id={`date-${draft.id}`} type="date" value={draft.occurred_on} onChange={(event) => update(draft.id, 'occurred_on', event.target.value)} /></div>
+                  <label className="grid gap-1.5 text-sm" htmlFor={`category-${draft.id}`}><span>Categoria</span><select id={`category-${draft.id}`} className={fieldClass} value={draft.category} onChange={(event) => update(draft.id, 'category', event.target.value)}>{!IMPORT_CATEGORIES.some((category) => category === draft.category) && <option value={draft.category}>{draft.category}</option>}{IMPORT_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
                 </CardContent>
               </Card>
             ))}

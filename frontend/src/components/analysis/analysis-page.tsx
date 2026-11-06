@@ -13,11 +13,18 @@ function money(value: string, currency: string) {
 }
 
 function TransactionLine({ transaction, currency }: { transaction: Transaction; currency: string }) {
+  const title = transaction.source === 'manual'
+    ? transaction.merchant || transaction.description
+    : transaction.category || 'Altro'
+  const metadata = transaction.source === 'manual'
+    ? `${new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString('it-IT')} · ${transaction.category || 'Senza categoria'}`
+    : new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString('it-IT')
+
   return (
     <div className="flex items-center justify-between gap-4 border-t border-white/10 py-3 first:border-0 first:pt-0">
       <div className="min-w-0">
-        <p className="truncate font-medium text-foreground">{transaction.merchant || transaction.description}</p>
-        <p className="text-xs text-muted-foreground">{new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString('it-IT')} · {transaction.category || 'Senza categoria'}</p>
+        <p className="truncate font-medium text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{metadata}</p>
       </div>
       <span className="shrink-0 font-semibold tabular-nums">{money(transaction.amount, currency)}</span>
     </div>

@@ -53,15 +53,17 @@ function formatDate(date: string): string {
 }
 
 function primaryText(transaction: Transaction): string {
+  if (transaction.source !== 'manual' && transaction.category) return transaction.category
   return transaction.merchant?.trim() || transaction.description.trim() || 'Movimento'
 }
 
 function secondaryText(transaction: Transaction): string | null {
+  if (transaction.source !== 'manual') return transaction.notes?.trim() || null
   return transaction.notes?.trim() || transaction.category?.trim() || null
 }
 
 function needsReview(transaction: Transaction): boolean {
-  return transaction.source !== 'manual' && (!transaction.merchant?.trim() || !transaction.category?.trim())
+  return transaction.source !== 'manual' && transaction.category === 'Altro'
 }
 
 export function TransactionsPage() {

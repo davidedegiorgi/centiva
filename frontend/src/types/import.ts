@@ -21,7 +21,7 @@ export interface BulkImportPayload {
     occurred_on: string
     description: string
     merchant: string | null
-    category: string | null
+    category: string
     notes: string | null
     source: Extract<TransactionSource, 'csv' | 'ocr'>
   }>

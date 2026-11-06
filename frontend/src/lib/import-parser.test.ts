@@ -1,6 +1,25 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseOcrText } from '@/lib/import-parser'
+import { parseOcrText, suggestCategory } from '@/lib/import-parser'
+
+describe('suggestCategory', () => {
+  it.each([
+    ['OPENAI *CHATGPT SUBSCRIPTION', 'expense', 'Abbonamenti'],
+    ['APPLE.COM/BILL ICLOUD', 'expense', 'Abbonamenti'],
+    ['AMAZON PRIME MEMBERSHIP', 'expense', 'Abbonamenti'],
+    ['AMAZON EU ORDINE 123', 'expense', 'Acquisti'],
+    ['PAGAMENTO POS CONAD', 'expense', 'Spesa'],
+    ['FARMACIA CENTRALE', 'expense', 'Salute'],
+    ['BONIFICO DA STRIPE', 'income', 'Bonifico ricevuto'],
+    ['ACCREDITO STIPENDIO', 'income', 'Stipendio'],
+  ] as const)('classifies %s as %s', (text, type, expected) => {
+    expect(suggestCategory(text, type)).toBe(expected)
+  })
+
+  it('uses Altro instead of leaving an unknown expense uncategorized', () => {
+    expect(suggestCategory('OPERAZIONE CARTA XYZ 4821')).toBe('Altro')
+  })
+})
 
 describe('parseOcrText', () => {
   it('ignores a dot-separated time and reads the signed Postepay amount', () => {
@@ -34,7 +53,7 @@ describe('parseOcrText', () => {
 
     expect(rows).toHaveLength(2)
     expect(rows[0]).toMatchObject({ amount: '34.80', type: 'expense', category: 'Spesa' })
-    expect(rows[1]).toMatchObject({ amount: '5.00', type: 'income', category: 'Entrate' })
+    expect(rows[1]).toMatchObject({ amount: '5.00', type: 'income', category: 'Rimborso' })
   })
 
   it('does not create a transaction when OCR sees only date and time', () => {
@@ -133,5 +152,6 @@ describe('parseOcrText', () => {
     expect(rows).toHaveLength(3)
     expect(rows.map((row) => row.amount)).toEqual(['4.99', '2.99', '30.42'])
     expect(rows.map((row) => row.occurred_on)).toEqual(['2026-10-29', '2026-10-28', '2026-10-26'])
+    expect(rows.every((row) => row.category.length > 0)).toBe(true)
   })
 })
