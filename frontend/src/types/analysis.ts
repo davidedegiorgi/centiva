@@ -3,20 +3,20 @@ import type { Transaction } from '@/types/transaction'
 export interface AnalysisData {
   currency: string
   sample_size: number
-  period: {
+  period?: {
     from: string
     to: string
     previous_from: string
     previous_to: string
   }
-  summary: {
+  summary?: {
     current_expenses: string
     previous_comparable_expenses: string
     change_percentage: number | null
     categorized_expenses: string
     category_coverage_percentage: number
   }
-  categories: Array<{
+  categories?: Array<{
     category: string
     amount: string
     percentage: number
