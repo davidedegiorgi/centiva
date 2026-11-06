@@ -429,8 +429,20 @@ export function parseOcrText(text: string): ImportDraft[] {
     .map((variant) => variant.trim())
     .filter(Boolean)
   const parsedVariants = variants.map(parseSingleOcrText)
-  const selectedRows = [...parsedVariants].reverse().find((rows) => rows.length > 0) ?? []
   const combinedText = variants.join(' ')
+  const taxAmounts = new Set(variants.flatMap((variant) => variant
+    .split(/\r?\n/)
+    .filter((line) => /\b(?:iva|imposta|imponibile|aliquota|di\s+cui)\b/i.test(line))
+    .flatMap((line) => amountCandidates(line).map((candidate) => Math.abs(candidate.value).toFixed(2)))))
+  const confirmedAmounts = new Set(variants.flatMap((variant) => variant
+    .split(/\r?\n/)
+    .filter((line) => /totale|da\s+pagare|importo\W*pag|pagamento\W*(?:carta|contante|bancomat|pos)/i.test(line))
+    .flatMap((line) => amountCandidates(line).map((candidate) => Math.abs(candidate.value).toFixed(2)))))
+  const safeVariants = parsedVariants.map((rows) => rows.filter((row) => (
+    !taxAmounts.has(Number(row.amount).toFixed(2))
+    || confirmedAmounts.has(Number(row.amount).toFixed(2))
+  )))
+  const selectedRows = [...safeVariants].reverse().find((rows) => rows.length > 0) ?? []
 
   return selectedRows.map((row) => ({
     ...row,

@@ -242,6 +242,34 @@ describe('parseOcrText', () => {
     expect(rows[0]).toMatchObject({ amount: '5.00', category: 'Spesa' })
   })
 
+  it('rejects an isolated VAT value returned by the receipt-specific pass', () => {
+    const sparseText = `
+      CASEIFICIO LA GRAZIA
+      DOCUMENTO COMMERCIALE
+      TOTALE COMPLESSIVO ILLEGGIBILE
+      DI CUI IVA 0,19
+    `
+    const blockText = '0,19'
+
+    const rows = parseOcrText(`${sparseText}${OCR_VARIANT_SEPARATOR}${blockText}`)
+
+    expect(rows).toEqual([])
+  })
+
+  it('allows a small amount when another pass explicitly confirms it as the total', () => {
+    const sparseText = `
+      DOCUMENTO COMMERCIALE
+      TOTALE COMPLESSIVO 0,19
+      DI CUI IVA 0,02
+    `
+    const blockText = '0,19'
+
+    const rows = parseOcrText(`${sparseText}${OCR_VARIANT_SEPARATOR}${blockText}`)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '0.19' })
+  })
+
   it('extracts every movement grouped below an Oggi heading', () => {
     const today = new Date()
     const expectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
