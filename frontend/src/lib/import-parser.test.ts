@@ -86,7 +86,56 @@ describe('parseOcrText', () => {
     `)
 
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ amount: '42.50', occurred_on: '2026-11-01' })
+    expect(rows[0]).toMatchObject({ amount: '42.50', occurred_on: '2026-11-01', category: 'Ristorazione' })
+  })
+
+  it('uses the amount due instead of taxable amount and VAT on a grocery receipt', () => {
+    const rows = parseOcrText(`
+      SUPERMERCATO CONAD
+      DOCUMENTO COMMERCIALE
+      2 PASTA 3,80
+      LATTE 1,70
+      SUBTOTALE 5,50
+      IMPONIBILE 5,00
+      IVA 10% 0,50
+      TOTALE DA PAGARE EUR 5,50
+      06/11/2026 18:42
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      amount: '5.50',
+      occurred_on: '2026-11-06',
+      category: 'Spesa',
+    })
+  })
+
+  it('chooses total when total and VAT are printed on the same line', () => {
+    const rows = parseOcrText(`
+      FARMACIA CENTRALE
+      SCONTRINO FISCALE
+      TOTALE 24,90 IVA 2,26
+      CARTA 24,90
+      05/11/2026 10:11
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '24.90', category: 'Salute' })
+  })
+
+  it('falls back to the largest eligible receipt amount when the total label is unreadable', () => {
+    const rows = parseOcrText(`
+      PENNY MARKET
+      DOCUMENTO COMMERCIALE
+      ARTICOLO 4,20
+      ARTICOLO 7,40
+      PAGAMENTO CARTA 18,60
+      IVA 1,69
+      04/11/2026 12:15
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '18.60', category: 'Spesa' })
   })
 
   it('extracts every movement grouped below an Oggi heading', () => {

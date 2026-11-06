@@ -136,12 +136,12 @@ export function suggestCategory(text: string, type: 'income' | 'expense' = 'expe
     ['Prelievi', ['prelievo', 'cash withdrawal', 'sportello atm']],
     ['Commissioni', ['commissione', 'canone carta', 'imposta di bollo', 'spese bancarie']],
     ['Abbonamenti', ['amazon prime', 'prime video', 'netflix', 'spotify', 'disney plus', 'dazn', 'sky', 'now tv', 'apple.com/bill', 'icloud', 'google one', 'youtube premium', 'chatgpt', 'openai', 'microsoft 365', 'adobe', 'canva', 'abbonamento']],
-    ['Spesa', ['supermercato', 'alimentari', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros']],
-    ['Ristorazione', ['ristorante', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
+    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'panificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly']],
+    ['Ristorazione', ['ristorante', 'ristorazione', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'gelateria', 'pasticceria', 'paninoteca', 'tavola calda', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
     ['Trasporti', ['trenitalia', 'italo treno', 'biglietto treno', 'metro', 'autobus', 'trasporto', 'taxi', 'uber', 'freenow', 'telepass', 'autostrade', 'parcheggio', 'benzina', 'carburante', 'distributore', 'eni station', 'q8', 'tamoil', 'ip gruppo api', 'atm milano']],
     ['Utenze', ['bolletta', 'energia', 'elettricita', 'luce e gas', 'enel', 'a2a', 'hera', 'iren', 'acea', 'telefono', 'telefonia', 'vodafone', 'tim', 'windtre', 'iliad', 'fastweb', 'internet fibra']],
-    ['Casa', ['affitto', 'condominio', 'mutuo', 'ikea', 'leroy merlin', 'brico', 'mobilificio', 'ferramenta']],
-    ['Salute', ['farmacia', 'parafarmacia', 'medico', 'dentista', 'clinica', 'ospedale', 'sanitaria', 'ottica', 'laboratorio analisi']],
+    ['Casa', ['affitto', 'condominio', 'mutuo', 'ikea', 'leroy merlin', 'brico', 'mobilificio', 'ferramenta', 'casalinghi', 'arredamento']],
+    ['Salute', ['farmacia', 'parafarmacia', 'medico', 'dentista', 'clinica', 'ospedale', 'sanitaria', 'ottica', 'laboratorio analisi', 'ticket sanitario']],
     ['Assicurazioni', ['assicurazione', 'polizza', 'unipol', 'generali', 'allianz', 'axa', 'zurich']],
     ['Viaggi', ['hotel', 'albergo', 'booking.com', 'airbnb', 'ryanair', 'easyjet', 'ita airways', 'compagnia aerea', 'volo', 'agenzia viaggi']],
     ['Istruzione', ['scuola', 'universita', 'corso', 'udemy', 'coursera', 'libreria', 'libro scolastico']],
@@ -204,6 +204,7 @@ const moneyPattern = /(?:€\s*)?[+-]?\s*\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})(?:\s*(
 
 interface AmountCandidate { value: number; raw: string; index: number; score: number }
 interface DetectedEntry { candidate: AmountCandidate; relativeIndex: number }
+interface ReceiptAmountCandidate extends AmountCandidate { lineIndex: number; receiptScore: number }
 
 function dateIn(value: string): string | null {
   return value.match(numericDatePattern)?.[0]
@@ -278,8 +279,79 @@ function deduplicateNearbyEntries(entries: DetectedEntry[]): DetectedEntry[] {
   }, [])
 }
 
+function isReceiptText(lines: string[]): boolean {
+  const text = lines.join(' ')
+  const hasStrongReceiptSignal = /scontrino|ricevuta|documento commerciale|partita\s+iva|p\.?\s*iva|imponibile|subtotale|\biva\b|\bresto\b/i.test(text)
+  const hasExplicitTotal = /totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|importo\s+(?:pagato|dovuto)/i.test(text)
+  const hasBankMovementSignal = /pagamento\s+(?:pos|e-?commerce)|bonifico|accredito|prelievo|operazione\s+carta|carte\s+postepay/i.test(text)
+
+  return hasStrongReceiptSignal || (hasExplicitTotal && !hasBankMovementSignal)
+}
+
+function receiptScore(line: string, candidate: AmountCandidate): number {
+  const prefix = line.slice(Math.max(0, candidate.index - 64), candidate.index).toLowerCase()
+  const suffix = line.slice(candidate.index + candidate.raw.length, candidate.index + candidate.raw.length + 32).toLowerCase()
+  let score = candidate.score
+
+  if (/\b(?:iva|imposta|imponibile|subtotale|resto|sconto|risparmio|acconto|commissione|aliquota|di\s+cui)\b[^\d]*$/i.test(prefix)) {
+    score -= 120
+  } else if (/(?:totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|importo\s+(?:pagato|dovuto)|da\s+pagare)[^\d]*$/i.test(prefix)) {
+    score += 140
+  } else if (/\btotale[^\d]*$/i.test(prefix)) {
+    score += 100
+  } else if (/\b(?:pagato|contanti|carta)\b[^\d]*$/i.test(prefix)) {
+    score += 35
+  }
+
+  if (/^\s*(?:totale|da\s+pagare)\b/i.test(suffix)) score += 90
+  if (/\b(?:iva|imponibile|subtotale|resto|sconto)\b/i.test(line) && score < 80) score -= 45
+
+  return score
+}
+
+function receiptDraft(lines: string[]): ImportDraft | null {
+  const candidates = lines.flatMap((line, lineIndex) => amountCandidates(line).map((candidate): ReceiptAmountCandidate => ({
+    ...candidate,
+    lineIndex,
+    receiptScore: receiptScore(line, candidate),
+  })))
+  if (candidates.length === 0) return null
+
+  const explicitTotals = candidates.filter((candidate) => candidate.receiptScore >= 80)
+  const usableCandidates = candidates.filter((candidate) => candidate.receiptScore > -40)
+  const selected = explicitTotals.sort((left, right) => right.receiptScore - left.receiptScore || right.lineIndex - left.lineIndex)[0]
+    ?? usableCandidates.sort((left, right) => Math.abs(right.value) - Math.abs(left.value) || right.lineIndex - left.lineIndex)[0]
+  if (!selected) return null
+
+  const text = lines.join(' ')
+  const date = dateIn(text)
+  const merchant = lines.find((line) => (
+    /[a-zà-ÿ]{3}/i.test(line)
+    && !/scontrino|ricevuta|documento commerciale|partita\s+iva|p\.?\s*iva|totale|subtotale|imponibile|\biva\b/i.test(line)
+    && amountCandidates(line).length === 0
+  )) ?? ''
+
+  return {
+    id: crypto.randomUUID(),
+    type: 'expense',
+    amount: Math.abs(selected.value).toFixed(2),
+    currency: /\b(?:USD|GBP|CHF)\b/i.test(text) ? text.match(/\b(?:USD|GBP|CHF)\b/i)![0].toUpperCase() : 'EUR',
+    occurred_on: date ? parseDate(date) : new Date().toISOString().slice(0, 10),
+    description: merchant ? `Acquisto presso ${merchant}` : 'Spesa rilevata da scontrino',
+    merchant,
+    category: suggestCategory(text),
+    notes: '',
+    source: 'ocr',
+  }
+}
+
 export function parseOcrText(text: string): ImportDraft[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  if (isReceiptText(lines)) {
+    const receipt = receiptDraft(lines)
+    if (receipt) return [receipt]
+  }
+
   const dated: ImportDraft[] = []
   const dateIndexes = lines.flatMap((line, index) => dateIn(line) ? [index] : [])
 
