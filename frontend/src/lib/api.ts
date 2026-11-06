@@ -18,6 +18,7 @@ import type { AnalysisResponse } from '@/types/analysis'
 import type { BulkImportPayload } from '@/types/import'
 import type { PlanningResponse } from '@/types/planning'
 import type { GoalListResponse, GoalPayload, GoalResponse } from '@/types/goal'
+import type { CategoryBudgetPayload, CategoryBudgetResponse } from '@/types/budget'
 
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000'
@@ -232,6 +233,19 @@ export const analysisApi = {
 export const planningApi = {
   async show(currency = 'EUR'): Promise<PlanningResponse> {
     return request<PlanningResponse>(`/api/v1/planning?${new URLSearchParams({ currency })}`)
+  },
+}
+
+export const categoryBudgetApi = {
+  async list(month: string, currency = 'EUR'): Promise<CategoryBudgetResponse> {
+    const query = new URLSearchParams({ month, currency })
+    return request<CategoryBudgetResponse>(`/api/v1/category-budgets?${query.toString()}`)
+  },
+  async save(payload: CategoryBudgetPayload): Promise<void> {
+    return stateChangingRequest<void>('/api/v1/category-budgets', 'POST', payload)
+  },
+  async remove(id: string): Promise<void> {
+    return stateChangingRequest<void>(`/api/v1/category-budgets/${id}`, 'DELETE')
   },
 }
 

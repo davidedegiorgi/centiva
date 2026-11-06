@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\CategoryBudget;
 use App\Models\SavingsGoal;
 use App\Models\Transaction;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -43,6 +44,14 @@ class AppServiceProvider extends ServiceProvider
             abort_if($user === null, 401);
 
             return $user->savingsGoals()->whereKey($value)->firstOrFail();
+        });
+
+        Route::bind('categoryBudget', function (string $value): CategoryBudget {
+            $user = request()->user();
+
+            abort_if($user === null, 401);
+
+            return $user->categoryBudgets()->whereKey($value)->firstOrFail();
         });
 
         RateLimiter::for('login', function (Request $request): Limit {

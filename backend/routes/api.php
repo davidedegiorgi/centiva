@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\V1\BulkDeleteTransactionController;
 use App\Http\Controllers\Api\V1\BulkTransactionController;
+use App\Http\Controllers\Api\V1\CategoryBudgetController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\GoalContributionController;
 use App\Http\Controllers\Api\V1\PlanningController;
@@ -37,6 +38,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/analysis', AnalysisController::class)->name('analysis');
         Route::get('/planning', PlanningController::class)->name('planning');
+        Route::get('/category-budgets', [CategoryBudgetController::class, 'index'])->name('category-budgets.index');
+        Route::post('/category-budgets', [CategoryBudgetController::class, 'store'])->name('category-budgets.store');
+        Route::delete('/category-budgets/{categoryBudget}', [CategoryBudgetController::class, 'destroy'])->name('category-budgets.destroy');
         Route::post('/savings-goals/{savingsGoal}/contributions', GoalContributionController::class)
             ->name('savings-goals.contributions.store');
         Route::apiResource('savings-goals', SavingsGoalController::class)
