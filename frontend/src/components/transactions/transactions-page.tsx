@@ -52,6 +52,18 @@ function formatDate(date: string): string {
   }).format(new Date(`${date}T00:00:00`))
 }
 
+function primaryText(transaction: Transaction): string {
+  return transaction.merchant?.trim() || transaction.description.trim() || 'Movimento'
+}
+
+function secondaryText(transaction: Transaction): string | null {
+  return transaction.notes?.trim() || transaction.category?.trim() || null
+}
+
+function needsReview(transaction: Transaction): boolean {
+  return transaction.source !== 'manual' && (!transaction.merchant?.trim() || !transaction.category?.trim())
+}
+
 export function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [meta, setMeta] = useState<PaginationMeta>(emptyMeta)
@@ -291,7 +303,7 @@ export function TransactionsPage() {
         </Alert>
       )}
 
-      <Card className="overflow-hidden border-white/10 bg-card">
+      <Card className="mb-4 overflow-hidden border-white/10 bg-card">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <p className="font-medium text-foreground">
             {meta.total === 1 ? '1 transazione' : `${meta.total} transazioni`}
@@ -319,18 +331,18 @@ export function TransactionsPage() {
           <>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-white/10 bg-white/[0.035] text-xs uppercase tracking-wide text-zinc-400">
                   <tr>
                     <th className="px-5 py-3 font-medium">Data</th>
-                    <th className="px-5 py-3 font-medium">Descrizione</th>
-                    <th className="px-5 py-3 font-medium">Categoria</th>
+                    <th className="px-5 py-3 font-medium">Movimento</th>
+                    <th className="px-5 py-3 font-medium">Categoria e stato</th>
                     <th className="px-5 py-3 text-right font-medium">Importo</th>
                     <th className="w-28 px-5 py-3"><span className="sr-only">Azioni</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-white/10">
                   {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="hover:bg-slate-50/70">
+                    <tr key={transaction.id} className="transition-colors hover:bg-white/[0.035]">
                       <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">
                         {formatDate(transaction.occurred_on)}
                       </td>
@@ -344,25 +356,28 @@ export function TransactionsPage() {
                             )}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">{transaction.description}</p>
-                            {transaction.merchant && (
-                              <p className="truncate text-xs text-muted-foreground">{transaction.merchant}</p>
-                            )}
+                            <p className="truncate font-medium text-foreground">{primaryText(transaction)}</p>
+                            {transaction.notes && <p className="truncate text-xs text-muted-foreground">{transaction.notes}</p>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-muted-foreground">
-                        {transaction.category ?? '—'}
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <span className={`rounded-full px-2.5 py-1 text-xs ${transaction.category ? 'bg-white/[0.06] text-zinc-300' : 'bg-amber-500/10 text-amber-200'}`}>
+                            {transaction.category || 'Senza categoria'}
+                          </span>
+                          {needsReview(transaction) && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">Dati da verificare</span>}
+                        </div>
                       </td>
                       <td className={`whitespace-nowrap px-5 py-4 text-right font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
                         {transaction.type === 'income' ? '+' : '−'} {formatAmount(transaction)}
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" type="button" onClick={() => openEditForm(transaction)} aria-label={`Modifica ${transaction.description}`}>
+                          <Button variant="ghost" size="icon" type="button" onClick={() => openEditForm(transaction)} aria-label={`Modifica ${primaryText(transaction)}`}>
                             <Pencil aria-hidden="true" />
                           </Button>
-                          <Button variant="ghost" size="icon" type="button" disabled={deletingId === transaction.id} onClick={() => handleDelete(transaction)} aria-label={`Elimina ${transaction.description}`}>
+                          <Button variant="ghost" size="icon" type="button" disabled={deletingId === transaction.id} onClick={() => handleDelete(transaction)} aria-label={`Elimina ${primaryText(transaction)}`}>
                             {deletingId === transaction.id ? (
                               <LoaderCircle className="animate-spin" aria-hidden="true" />
                             ) : (
@@ -377,15 +392,19 @@ export function TransactionsPage() {
               </table>
             </div>
 
-            <div className="divide-y md:hidden">
+            <div className="divide-y divide-white/10 md:hidden">
               {transactions.map((transaction) => (
                 <article className="flex flex-col gap-3 p-4" key={transaction.id}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{transaction.description}</p>
+                      <p className="truncate font-medium text-foreground">{primaryText(transaction)}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {formatDate(transaction.occurred_on)} · {transaction.category ?? 'Senza categoria'}
+                        {formatDate(transaction.occurred_on)}{secondaryText(transaction) ? ` · ${secondaryText(transaction)}` : ''}
                       </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {!transaction.category && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">Senza categoria</span>}
+                        {needsReview(transaction) && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">Dati da verificare</span>}
+                      </div>
                     </div>
                     <p className={`shrink-0 font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
                       {transaction.type === 'income' ? '+' : '−'} {formatAmount(transaction)}

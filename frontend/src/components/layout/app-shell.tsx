@@ -71,7 +71,7 @@ export function AppShell({
         </div>
       </header>
 
-      <div className="pb-28 sm:pb-32">{children}</div>
+      <div className="pb-[calc(10rem+env(safe-area-inset-bottom))] sm:pb-[calc(11rem+env(safe-area-inset-bottom))]">{children}</div>
 
       <nav
         className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-1rem)] max-w-3xl -translate-x-1/2 rounded-[1.4rem] border border-white/15 bg-[#090c0a]/90 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.55),inset_0_1px_rgba(255,255,255,0.07)] backdrop-blur-2xl"

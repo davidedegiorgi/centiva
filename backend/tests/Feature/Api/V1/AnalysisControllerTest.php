@@ -23,7 +23,101 @@ class AnalysisControllerTest extends TestCase
         $this->actingAs($user)->getJson('/api/v1/analysis')
             ->assertOk()->assertJsonCount(0, 'data.insights')
             ->assertJsonCount(0, 'data.duplicates')->assertJsonCount(0, 'data.anomalies')
-            ->assertJsonPath('data.sample_size', 0);
+            ->assertJsonPath('data.sample_size', 0)
+            ->assertJsonPath('data.status.insights', 'insufficient')
+            ->assertJsonPath('data.status.duplicates', 'insufficient')
+            ->assertJsonPath('data.status.anomalies', 'insufficient');
+    }
+
+    public function test_uncategorized_expenses_do_not_generate_category_advice(): void
+    {
+        $this->travelTo('2026-11-20 12:00:00');
+        $user = User::factory()->create();
+        Transaction::factory()->expense()->for($user)->count(3)->create([
+            'occurred_on' => '2026-11-10',
+            'category' => null,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/analysis');
+
+        $response->assertOk()
+            ->assertJsonCount(0, 'data.insights')
+            ->assertJsonPath('data.data_quality.current_categorized_expenses', 0)
+            ->assertJsonPath('data.status.insights', 'insufficient');
+    }
+
+    public function test_category_insight_is_factual_and_has_no_assumed_saving(): void
+    {
+        $this->travelTo('2026-11-20 12:00:00');
+        $user = User::factory()->create();
+        Transaction::factory()->expense()->for($user)->count(3)->create([
+            'amount' => 20,
+            'occurred_on' => '2026-11-10',
+            'category' => 'Spesa',
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/analysis');
+
+        $response->assertOk()
+            ->assertJsonPath('data.status.insights', 'ready')
+            ->assertJsonPath('data.insights.0.title', 'La categoria principale è Spesa')
+            ->assertJsonPath('data.insights.0.potential_saving', '0.00');
+    }
+
+    public function test_anomaly_status_reports_insufficient_data_below_five_expenses(): void
+    {
+        $this->travelTo('2026-11-20 12:00:00');
+        $user = User::factory()->create();
+        Transaction::factory()->expense()->for($user)->count(4)->create([
+            'amount' => 20,
+            'occurred_on' => '2026-11-10',
+        ]);
+
+        $this->actingAs($user)->getJson('/api/v1/analysis')
+            ->assertOk()
+            ->assertJsonPath('data.status.anomalies', 'insufficient');
+    }
+
+    public function test_anomaly_status_reports_a_clear_completed_analysis(): void
+    {
+        $this->travelTo('2026-11-20 12:00:00');
+        $user = User::factory()->create();
+        Transaction::factory()->expense()->for($user)->count(5)->create([
+            'amount' => 20,
+            'occurred_on' => '2026-11-10',
+        ]);
+
+        $this->actingAs($user)->getJson('/api/v1/analysis')
+            ->assertOk()
+            ->assertJsonPath('data.status.anomalies', 'clear');
+    }
+
+    public function test_saving_amount_is_the_observed_difference_for_comparable_periods(): void
+    {
+        $this->travelTo('2026-11-20 12:00:00');
+        $user = User::factory()->create();
+        Transaction::factory()->expense()->for($user)->count(3)->create([
+            'amount' => 20,
+            'occurred_on' => '2026-11-10',
+            'category' => 'Spesa',
+        ]);
+        Transaction::factory()->expense()->for($user)->count(3)->create([
+            'amount' => 10,
+            'occurred_on' => '2026-10-10',
+            'category' => 'Spesa',
+        ]);
+        Transaction::factory()->expense()->for($user)->create([
+            'amount' => 500,
+            'occurred_on' => '2026-10-25',
+            'category' => 'Spesa',
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/analysis');
+
+        $response->assertOk()
+            ->assertJsonPath('data.data_quality.previous_comparable_expenses', 3)
+            ->assertJsonPath('data.insights.1.potential_saving', '30.00')
+            ->assertJsonPath('data.insights.1.message', 'Hai speso il 100% in più rispetto allo stesso periodo del mese scorso.');
     }
 
     public function test_analysis_uses_only_the_authenticated_users_real_expenses(): void
@@ -52,6 +146,7 @@ class AnalysisControllerTest extends TestCase
 
         $response->assertOk()->assertJsonPath('data.currency', 'EUR')
             ->assertJsonPath('data.sample_size', 8)
+            ->assertJsonPath('data.status.insights', 'ready')
             ->assertJsonCount(1, 'data.duplicates')
             ->assertJsonCount(2, 'data.duplicates.0.transactions')
             ->assertJsonCount(1, 'data.anomalies')

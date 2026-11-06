@@ -179,7 +179,7 @@ function App() {
         ) : activeView === 'import' ? (
           <ImportPage />
         ) : activeView === 'analysis' ? (
-          <AnalysisPage />
+          <AnalysisPage onOpenTransactions={() => changeView('transactions')} />
         ) : activeView === 'planning' ? (
           <PlanningPage />
         ) : activeView === 'goals' ? (

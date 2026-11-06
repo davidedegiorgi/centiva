@@ -114,25 +114,19 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
   }
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-8 lg:grid-cols-[0.7fr_1.3fr] lg:py-16">
-      <section>
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-          Il tuo account
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Ciao, {user.name.split(' ')[0]}.
-        </h1>
-        <p className="mt-4 max-w-md leading-7 text-muted-foreground">
-          Gestisci qui i dati essenziali del tuo profilo.
-        </p>
-      </section>
+    <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-8 lg:py-10">
+      <header className="border-b border-white/10 pb-6">
+        <p className="text-sm font-medium text-emerald-300">Profilo</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Account</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Gestisci dati personali, installazione e cancellazione dell’account.</p>
+      </header>
 
       <Card className="border-white/10 bg-card shadow-[0_24px_70px_-42px_rgba(15,45,34,0.32)]">
         <CardHeader>
           <div className="mb-2 grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-300">
             <UserRound className="size-5" aria-hidden="true" />
           </div>
-          <CardTitle>Profilo personale</CardTitle>
+          <CardTitle>Dati personali</CardTitle>
           <CardDescription>Aggiorna nome e indirizzo email.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -197,7 +191,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
         </CardContent>
       </Card>
 
-      <Card className="border-white/10 bg-[#0b0d0c] lg:col-start-2">
+      <Card className="border-white/10 bg-[#0b0d0c]">
         <CardHeader>
           <div className="mb-2 grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-300">
             <Smartphone className="size-5" aria-hidden="true" />
@@ -238,7 +232,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
         </CardContent>
       </Card>
 
-      <Card className="border-red-500/20 bg-[#0b0d0c] lg:col-start-2">
+      <Card className="border-red-500/20 bg-[#0b0d0c]">
         <CardHeader>
           <div className="mb-2 grid size-10 place-items-center rounded-xl bg-red-500/10 text-red-300">
             <TriangleAlert className="size-5" aria-hidden="true" />
