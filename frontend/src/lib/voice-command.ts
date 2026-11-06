@@ -16,7 +16,8 @@ function localDate(date: Date): string {
 
 function parseAmount(transcript: string): number | null {
   const match = transcript.match(/(\d+(?:[.\s]\d{3})*(?:[,.]\d{1,2})?)\s*(?:€|euro|eur|dollari?|usd|sterline?|gbp|franchi?|chf)\b/i)
-    ?? transcript.match(/\b(?:spesa|uscita|entrata|incasso|accredito|pagato|ricevuto)\s+(?:di\s+)?(\d+(?:[.\s]\d{3})*(?:[,.]\d{1,2})?)/i)
+    ?? transcript.match(/\b(?:spesa|uscita|entrata|incasso|accredito|pagato|ricevuto|stipendio|pensione|rimborso)\s+(?:di\s+)?(\d+(?:[.\s]\d{3})*(?:[,.]\d{1,2})?)/i)
+    ?? transcript.match(/\b(\d+(?:[.\s]\d{3})*(?:[,.]\d{1,2})?)\s+(?:di\s+)?(?:spesa|uscita|entrata|incasso|accredito|pagato|ricevuto|stipendio|pensione|rimborso)\b/i)
 
   if (!match) return null
   const raw = match[1].replace(/\s/g, '')
@@ -28,8 +29,8 @@ function parseAmount(transcript: string): number | null {
 }
 
 function parseType(transcript: string): TransactionType | null {
-  if (/\b(?:entrata|incasso|accredito|ricevuto|stipendio|pensione|rimborso)\b/i.test(transcript)) return 'income'
-  if (/\b(?:spesa|uscita|pagato|pagamento|addebito|acquisto)\b/i.test(transcript)) return 'expense'
+  if (/\b(?:entrata|incasso|accredito|ricevuto|stipendio|pensione|rimborso|guadagnato)\b/i.test(transcript)) return 'income'
+  if (/\b(?:spesa|uscita|pagato|pagamento|addebito|acquisto|speso)\b/i.test(transcript)) return 'expense'
   return null
 }
 
@@ -81,4 +82,4 @@ export function parseVoiceTransaction(transcript: string, now = new Date()): Voi
   }
 }
 
-export const voiceCommandExamples = 'Prova: “spesa 25 euro categoria spesa oggi” oppure “entrata 1.200 euro stipendio”.'
+export const voiceCommandExamples = 'Prova semplicemente: “50 spesa” oppure “20 entrata”.'

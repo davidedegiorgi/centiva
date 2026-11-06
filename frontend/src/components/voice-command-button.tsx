@@ -63,7 +63,7 @@ export function VoiceCommandButton() {
       : 'Non sono riuscito ad ascoltare. Riprova.')
     recognition.onend = () => { setIsListening(false); recognitionRef.current = null }
     recognitionRef.current = recognition
-    setMessage('Ti ascolto… pronuncia tipo, importo, categoria e data.')
+    setMessage('Ti ascolto… puoi dire semplicemente “50 spesa”.')
     setIsListening(true)
     recognition.start()
   }

@@ -5,6 +5,24 @@ import { parseVoiceTransaction } from '@/lib/voice-command'
 const now = new Date(2026, 10, 6, 12)
 
 describe('parseVoiceTransaction', () => {
+  it('parses the minimal phrase amount followed by expense', () => {
+    expect(parseVoiceTransaction('50 spesa', now)).toMatchObject({
+      type: 'expense', amount: 50, currency: 'EUR', occurred_on: '2026-11-06', category: 'Altro',
+    })
+  })
+
+  it('parses the minimal phrase amount followed by income', () => {
+    expect(parseVoiceTransaction('20 entrata', now)).toMatchObject({
+      type: 'income', amount: 20, currency: 'EUR', occurred_on: '2026-11-06', category: 'Entrate',
+    })
+  })
+
+  it('accepts type before amount without requiring a currency', () => {
+    expect(parseVoiceTransaction('spesa 12,50', now)).toMatchObject({
+      type: 'expense', amount: 12.5, currency: 'EUR', occurred_on: '2026-11-06',
+    })
+  })
+
   it('parses an expense with explicit category and today', () => {
     expect(parseVoiceTransaction('spesa 25,50 euro categoria spesa oggi', now)).toMatchObject({
       type: 'expense', amount: 25.5, currency: 'EUR', occurred_on: '2026-11-06', category: 'Spesa',
