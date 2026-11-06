@@ -9,6 +9,9 @@ describe('suggestCategory', () => {
     ['AMAZON PRIME MEMBERSHIP', 'expense', 'Abbonamenti'],
     ['AMAZON EU ORDINE 123', 'expense', 'Acquisti'],
     ['PAGAMENTO POS CONAD', 'expense', 'Spesa'],
+    ['CASEIF1CIO LA GRAZIA', 'expense', 'Spesa'],
+    ['SUPERMERCAT0 ALIMENTAR1', 'expense', 'Spesa'],
+    ['P1ZZERIA CENTRALE', 'expense', 'Ristorazione'],
     ['FARMACIA CENTRALE', 'expense', 'Salute'],
     ['BONIFICO DA STRIPE', 'income', 'Bonifico ricevuto'],
     ['ACCREDITO STIPENDIO', 'income', 'Stipendio'],
@@ -18,6 +21,17 @@ describe('suggestCategory', () => {
 
   it('uses Altro instead of leaving an unknown expense uncategorized', () => {
     expect(suggestCategory('OPERAZIONE CARTA XYZ 4821')).toBe('Altro')
+  })
+
+  it('uses Acquisti as a safe category for an otherwise unknown receipt', () => {
+    const rows = parseOcrText(`
+      EMPORIO XYZ
+      DOCUMENTO COMMERCIALE
+      TOTALE DA PAGARE 12,40
+      06/11/2026 18:20
+    `)
+
+    expect(rows[0]).toMatchObject({ amount: '12.40', category: 'Acquisti' })
   })
 })
 

@@ -7,7 +7,7 @@ import { dashboardApi, transactionApi } from '@/lib/api'
 import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
 
-const MAX_CAPTURE_SIDE = 1600
+const MAX_CAPTURE_SIDE = 2600
 const CAMERA_RELEASE_DELAY = 1500
 
 let sharedCameraStream: MediaStream | null = null
@@ -28,7 +28,7 @@ async function acquireCameraStream(): Promise<MediaStream> {
 
   pendingCameraStream = navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } },
   }).then((stream) => {
     sharedCameraStream = stream
     return stream
@@ -190,6 +190,19 @@ export function MobileCapturePage({ onEnterApp, sessionReady = true }: MobileCap
     if (!video || !canvas || video.videoWidth === 0) {
       setError('La fotocamera non è ancora pronta.')
       return
+    }
+
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (track && 'ImageCapture' in window) {
+      try {
+        const imageCapture = new ImageCapture(track)
+        const blob = await imageCapture.takePhoto()
+        const fullResolutionPhoto = new File([blob], 'centiva-scan.jpg', { type: blob.type || 'image/jpeg' })
+        await analyzeImage(fullResolutionPhoto)
+        return
+      } catch {
+        // Safari e alcuni browser usano il fotogramma video come fallback.
+      }
     }
 
     const scale = Math.min(1, MAX_CAPTURE_SIDE / Math.max(video.videoWidth, video.videoHeight))

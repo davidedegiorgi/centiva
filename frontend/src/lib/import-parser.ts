@@ -114,13 +114,46 @@ function searchableText(value: string): { words: string; compact: string } {
   return { words, compact: words.replace(/\s/g, '') }
 }
 
-function matchesKeyword(text: { words: string; compact: string }, keyword: string): boolean {
-  const keywordText = searchableText(keyword)
-  if (keywordText.compact.length <= 3) {
-    return ` ${text.words} `.includes(` ${keywordText.words} `)
+function editDistance(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex]
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      )
+    }
+    previous.splice(0, previous.length, ...current)
   }
 
-  return text.compact.includes(keywordText.compact)
+  return previous[right.length]
+}
+
+function keywordScore(text: { words: string; compact: string }, keyword: string): number {
+  const keywordText = searchableText(keyword)
+  if (keywordText.compact.length <= 3) {
+    return ` ${text.words} `.includes(` ${keywordText.words} `) ? 100 : 0
+  }
+
+  if (` ${text.words} `.includes(` ${keywordText.words} `)) return 130 + keywordText.compact.length
+  if (text.compact.includes(keywordText.compact)) return 115 + keywordText.compact.length
+
+  const textTokens = text.words.split(' ').filter(Boolean)
+  const keywordTokens = keywordText.words.split(' ').filter(Boolean)
+  let totalDistance = 0
+
+  const everyTokenMatches = keywordTokens.every((keywordToken) => {
+    if (keywordToken.length < 5) return textTokens.includes(keywordToken)
+    const maximumDistance = keywordToken.length >= 9 ? 2 : 1
+    const distance = Math.min(...textTokens.map((token) => editDistance(token, keywordToken)))
+    totalDistance += distance
+    return distance <= maximumDistance
+  })
+
+  return everyTokenMatches ? 80 + keywordText.compact.length - totalDistance * 12 : 0
 }
 
 export function suggestCategory(text: string, type: 'income' | 'expense' = 'expense'): string {
@@ -136,9 +169,9 @@ export function suggestCategory(text: string, type: 'income' | 'expense' = 'expe
     ['Prelievi', ['prelievo', 'cash withdrawal', 'sportello atm']],
     ['Commissioni', ['commissione', 'canone carta', 'imposta di bollo', 'spese bancarie']],
     ['Abbonamenti', ['amazon prime', 'prime video', 'netflix', 'spotify', 'disney plus', 'dazn', 'sky', 'now tv', 'apple.com/bill', 'icloud', 'google one', 'youtube premium', 'chatgpt', 'openai', 'microsoft 365', 'adobe', 'canva', 'abbonamento']],
-    ['Ristorazione', ['ristorante', 'ristorazione', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'gelateria', 'pasticceria', 'paninoteca', 'tavola calda', 'coperto', 'menu', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
-    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'panificio', 'caseificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly', 'pasta', 'latte', 'pane', 'formaggio', 'yogurt', 'biscotti', 'detersivo', 'ortaggi', 'frutta', 'verdura']],
-    ['Trasporti', ['trenitalia', 'italo treno', 'biglietto treno', 'metro', 'autobus', 'trasporto', 'taxi', 'uber', 'freenow', 'telepass', 'autostrade', 'parcheggio', 'benzina', 'carburante', 'distributore', 'eni station', 'q8', 'tamoil', 'ip gruppo api', 'atm milano']],
+    ['Ristorazione', ['ristorante', 'ristorazione', 'pizzeria', 'trattoria', 'osteria', 'caffe', 'bar', 'pub', 'gelateria', 'pasticceria', 'paninoteca', 'tavola calda', 'coperto', 'coperti', 'menu', 'pranzo', 'cena', 'pizza', 'antipasto', 'mcdonald', 'burger king', 'kfc', 'starbucks', 'deliveroo', 'just eat', 'glovo', 'uber eats', 'autogrill']],
+    ['Spesa', ['supermercato', 'alimentari', 'market', 'minimarket', 'discount', 'ortofrutta', 'macelleria', 'salumeria', 'panificio', 'caseificio', 'conad', 'coop', 'esselunga', 'lidl', 'aldi', 'carrefour', 'pam panorama', 'eurospin', 'md discount', 'despar', 'iper', 'bennet', 'tigros', 'penny market', 'todis', 'crai', 'famila', 'unes', 'iperal', 'il gigante', 'natura si', 'eataly', 'pasta', 'latte', 'pane', 'formaggio', 'yogurt', 'biscotti', 'detersivo', 'ortaggi', 'frutta', 'verdura', 'farina', 'acqua', 'bibita', 'surgelato']],
+    ['Trasporti', ['trenitalia', 'italo treno', 'biglietto treno', 'metro', 'autobus', 'trasporto', 'taxi', 'uber', 'freenow', 'telepass', 'autostrade', 'pedaggio', 'parcheggio', 'benzina', 'gasolio', 'diesel', 'carburante', 'distributore', 'eni station', 'q8', 'tamoil', 'ip gruppo api', 'atm milano']],
     ['Utenze', ['bolletta', 'energia', 'elettricita', 'luce e gas', 'enel', 'a2a', 'hera', 'iren', 'acea', 'telefono', 'telefonia', 'vodafone', 'tim', 'windtre', 'iliad', 'fastweb', 'internet fibra']],
     ['Casa', ['affitto', 'condominio', 'mutuo', 'ikea', 'leroy merlin', 'brico', 'mobilificio', 'ferramenta', 'casalinghi', 'arredamento']],
     ['Salute', ['farmacia', 'parafarmacia', 'medico', 'dentista', 'clinica', 'ospedale', 'sanitaria', 'ottica', 'laboratorio analisi', 'ticket sanitario']],
@@ -151,8 +184,14 @@ export function suggestCategory(text: string, type: 'income' | 'expense' = 'expe
   ]
   const rules = type === 'income' ? incomeCategories : expenseCategories
 
-  return rules.find(([, keywords]) => keywords.some((keyword) => matchesKeyword(value, keyword)))?.[0]
-    ?? (type === 'income' ? 'Entrate' : 'Altro')
+  const ranked = rules.map(([category, keywords], ruleIndex) => ({
+    category,
+    ruleIndex,
+    score: Math.max(...keywords.map((keyword) => keywordScore(value, keyword))),
+  })).filter((result) => result.score > 0)
+    .sort((left, right) => right.score - left.score || left.ruleIndex - right.ruleIndex)
+
+  return ranked[0]?.category ?? (type === 'income' ? 'Entrate' : 'Altro')
 }
 
 function draftFromRow(row: CsvRow, index: number): ImportDraft | null {
@@ -443,9 +482,13 @@ export function parseOcrText(text: string): ImportDraft[] {
     || confirmedAmounts.has(Number(row.amount).toFixed(2))
   )))
   const selectedRows = [...safeVariants].reverse().find((rows) => rows.length > 0) ?? []
+  const receiptLike = variants.some((variant) => isReceiptText(variant.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)))
 
   return selectedRows.map((row) => ({
     ...row,
-    category: suggestCategory(combinedText, row.type),
+    category: (() => {
+      const suggested = suggestCategory(combinedText, row.type)
+      return suggested === 'Altro' && receiptLike ? 'Acquisti' : suggested
+    })(),
   }))
 }

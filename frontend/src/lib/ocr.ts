@@ -5,8 +5,8 @@ import { OCR_VARIANT_SEPARATOR } from '@/lib/import-parser'
 type ProgressListener = (progress: number) => void
 type OcrImage = File | HTMLCanvasElement
 
-const MAX_UPLOAD_SIDE = 2000
-const MIN_RECEIPT_SIDE = 1600
+const MAX_UPLOAD_SIDE = 2600
+const MIN_RECEIPT_SIDE = 2200
 const RECEIPT_DETECTION_SIDE = 640
 const FAST_LANGUAGE_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 
@@ -51,7 +51,97 @@ function getWorker() {
   return workerPromise
 }
 
-interface ImageBounds { x: number; y: number; width: number; height: number }
+export interface ImageBounds { x: number; y: number; width: number; height: number }
+
+export function findReceiptBounds(pixels: Uint8ClampedArray, width: number, height: number): ImageBounds | null {
+  const mask = new Uint8Array(width * height)
+  const visited = new Uint8Array(width * height)
+
+  for (let index = 0; index < width * height; index += 1) {
+    const offset = index * 4
+    const red = pixels[offset]
+    const green = pixels[offset + 1]
+    const blue = pixels[offset + 2]
+    const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722
+    const saturation = Math.max(red, green, blue) - Math.min(red, green, blue)
+    if (luminance >= 112 && saturation <= 84) mask[index] = 1
+  }
+
+  let best: { bounds: ImageBounds; score: number } | null = null
+  const queue = new Int32Array(width * height)
+
+  for (let seed = 0; seed < mask.length; seed += 1) {
+    if (!mask[seed] || visited[seed]) continue
+    let head = 0
+    let tail = 0
+    let count = 0
+    let minX = width
+    let minY = height
+    let maxX = -1
+    let maxY = -1
+    queue[tail++] = seed
+    visited[seed] = 1
+
+    while (head < tail) {
+      const index = queue[head++]
+      const x = index % width
+      const y = Math.floor(index / width)
+      count += 1
+      minX = Math.min(minX, x)
+      minY = Math.min(minY, y)
+      maxX = Math.max(maxX, x)
+      maxY = Math.max(maxY, y)
+
+      const left = index - 1
+      if (x > 0 && !visited[left] && mask[left]) {
+        visited[left] = 1
+        queue[tail++] = left
+      }
+      const right = index + 1
+      if (x + 1 < width && !visited[right] && mask[right]) {
+        visited[right] = 1
+        queue[tail++] = right
+      }
+      const above = index - width
+      if (y > 0 && !visited[above] && mask[above]) {
+        visited[above] = 1
+        queue[tail++] = above
+      }
+      const below = index + width
+      if (y + 1 < height && !visited[below] && mask[below]) {
+        visited[below] = 1
+        queue[tail++] = below
+      }
+    }
+
+    const boxWidth = maxX - minX + 1
+    const boxHeight = maxY - minY + 1
+    const boxArea = boxWidth * boxHeight
+    const areaRatio = boxArea / (width * height)
+    const density = count / boxArea
+    const aspectRatio = boxWidth / boxHeight
+    if (
+      count < width * height * 0.002
+      || areaRatio < 0.008
+      || areaRatio > 0.9
+      || boxWidth < width * 0.045
+      || boxHeight < height * 0.06
+      || density < 0.28
+      || aspectRatio < 0.14
+      || aspectRatio > 4
+    ) continue
+
+    const centerX = (minX + maxX) / 2 / width
+    const centerY = (minY + maxY) / 2 / height
+    const centerDistance = Math.hypot(centerX - 0.5, centerY - 0.5)
+    const score = count * density * (1 - Math.min(0.55, centerDistance))
+    if (!best || score > best.score) {
+      best = { bounds: { x: minX, y: minY, width: boxWidth, height: boxHeight }, score }
+    }
+  }
+
+  return best?.bounds ?? null
+}
 
 function detectReceiptBounds(bitmap: ImageBitmap): ImageBounds | null {
   const detectionScale = Math.min(1, RECEIPT_DETECTION_SIDE / Math.max(bitmap.width, bitmap.height))
@@ -64,46 +154,16 @@ function detectReceiptBounds(bitmap: ImageBitmap): ImageBounds | null {
   if (!context) return null
 
   context.drawImage(bitmap, 0, 0, width, height)
-  const pixels = context.getImageData(0, 0, width, height).data
-  let minX = width
-  let minY = height
-  let maxX = -1
-  let maxY = -1
-  let paperPixels = 0
+  const detected = findReceiptBounds(context.getImageData(0, 0, width, height).data, width, height)
+  if (!detected) return null
 
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const offset = (y * width + x) * 4
-      const red = pixels[offset]
-      const green = pixels[offset + 1]
-      const blue = pixels[offset + 2]
-      const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722
-      const saturation = Math.max(red, green, blue) - Math.min(red, green, blue)
-      if (luminance < 118 || saturation > 72) continue
-
-      paperPixels += 1
-      minX = Math.min(minX, x)
-      minY = Math.min(minY, y)
-      maxX = Math.max(maxX, x)
-      maxY = Math.max(maxY, y)
-    }
-  }
-
-  if (maxX < minX || maxY < minY || paperPixels / (width * height) < 0.015) return null
-
-  const boxWidth = maxX - minX + 1
-  const boxHeight = maxY - minY + 1
-  const areaRatio = (boxWidth * boxHeight) / (width * height)
-  const aspectRatio = boxWidth / boxHeight
-  if (areaRatio > 0.9 || boxWidth < width * 0.08 || boxHeight < height * 0.12 || aspectRatio < 0.18 || aspectRatio > 3) return null
-
-  const marginX = Math.round(boxWidth * 0.06)
-  const marginY = Math.round(boxHeight * 0.04)
+  const marginX = Math.round(detected.width * 0.08)
+  const marginY = Math.round(detected.height * 0.06)
   const scaleBack = 1 / detectionScale
-  const sourceX = Math.max(0, minX - marginX)
-  const sourceY = Math.max(0, minY - marginY)
-  const sourceMaxX = Math.min(width, maxX + marginX + 1)
-  const sourceMaxY = Math.min(height, maxY + marginY + 1)
+  const sourceX = Math.max(0, detected.x - marginX)
+  const sourceY = Math.max(0, detected.y - marginY)
+  const sourceMaxX = Math.min(width, detected.x + detected.width + marginX)
+  const sourceMaxY = Math.min(height, detected.y + detected.height + marginY)
 
   return {
     x: Math.round(sourceX * scaleBack),
@@ -113,11 +173,14 @@ function detectReceiptBounds(bitmap: ImageBitmap): ImageBounds | null {
   }
 }
 
-async function optimizeImage(image: OcrImage): Promise<OcrImage> {
-  if (typeof createImageBitmap !== 'function') return image
+interface OptimizedImage { image: OcrImage; receiptWasCropped: boolean }
+
+async function optimizeImage(image: OcrImage): Promise<OptimizedImage> {
+  if (typeof createImageBitmap !== 'function') return { image, receiptWasCropped: false }
 
   const bitmap = await createImageBitmap(image)
-  const bounds = detectReceiptBounds(bitmap) ?? { x: 0, y: 0, width: bitmap.width, height: bitmap.height }
+  const detectedBounds = detectReceiptBounds(bitmap)
+  const bounds = detectedBounds ?? { x: 0, y: 0, width: bitmap.width, height: bitmap.height }
   const longestSide = Math.max(bounds.width, bounds.height)
 
   const minimumScale = bounds.width !== bitmap.width || bounds.height !== bitmap.height
@@ -131,15 +194,15 @@ async function optimizeImage(image: OcrImage): Promise<OcrImage> {
   const context = canvas.getContext('2d', { alpha: false })
   if (!context) {
     bitmap.close()
-    return image
+    return { image, receiptWasCropped: false }
   }
 
-  context.imageSmoothingEnabled = true
+  context.imageSmoothingEnabled = scale <= 1
   context.imageSmoothingQuality = 'high'
-  context.filter = 'grayscale(1) contrast(1.25)'
+  context.filter = 'grayscale(1) contrast(1.45)'
   context.drawImage(bitmap, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, canvas.width, canvas.height)
   bitmap.close()
-  return canvas
+  return { image: canvas, receiptWasCropped: detectedBounds !== null }
 }
 
 /** Avvia in anticipo il motore OCR e riusa lo stesso worker tra scansioni. */
@@ -154,13 +217,13 @@ export async function recognizeImage(imageSource: OcrImage, onProgress: Progress
   progressRangeEnd = 70
 
   try {
-    const [worker, image] = await Promise.all([getWorker(), optimizeImage(imageSource)])
+    const [worker, optimized] = await Promise.all([getWorker(), optimizeImage(imageSource)])
     await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT })
-    const sparseResult = await worker.recognize(image, {}, { text: true })
+    const sparseResult = await worker.recognize(optimized.image, {}, { text: true })
     const sparseText = sparseResult.data.text
     const looksLikeReceipt = /documento|scontrino|ricevuta|\biva\b|prezzo|totale|pagamento\W*cont|importo\W*pag/i.test(sparseText)
 
-    if (!looksLikeReceipt) {
+    if (!looksLikeReceipt && !optimized.receiptWasCropped) {
       onProgress(100)
       return sparseText
     }
@@ -170,7 +233,7 @@ export async function recognizeImage(imageSource: OcrImage, onProgress: Progress
     lastReportedProgress = 70
     onProgress(70)
     await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
-    const blockResult = await worker.recognize(image, {}, { text: true })
+    const blockResult = await worker.recognize(optimized.image, {}, { text: true })
     onProgress(100)
 
     return `${sparseText}${OCR_VARIANT_SEPARATOR}${blockResult.data.text}`
