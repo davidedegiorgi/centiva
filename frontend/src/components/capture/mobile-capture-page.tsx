@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Camera, Check, Images, LoaderCircle } from 'lucide-react'
 
 import { LiquidNumber } from '@/components/effects/liquid-number'
+import { VoiceCommandButton } from '@/components/voice-command-button'
 import { dashboardApi, transactionApi } from '@/lib/api'
 import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
@@ -247,7 +248,7 @@ export function MobileCapturePage() {
           <button className="grid size-20 place-items-center rounded-full border-[5px] border-white bg-white/20 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform active:scale-90 disabled:opacity-50" type="button" aria-label="Scatta e analizza" disabled={!cameraReady || isScanning} onClick={() => void capturePhoto()}>
             {isScanning ? <LoaderCircle className="size-7 animate-spin" /> : <Camera className="size-7" />}
           </button>
-          <span className="size-12" aria-hidden="true" />
+          <VoiceCommandButton placement="camera" />
         </div>
       </div>
 

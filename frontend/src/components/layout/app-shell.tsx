@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CalendarClock, Camera, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle, LogOut, Target, UserRound, type LucideIcon } from 'lucide-react'
+import { CalendarClock, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle, LogOut, Plus, Target, UserRound, type LucideIcon } from 'lucide-react'
 
 import { BrandLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ export type AppView = 'capture' | 'dashboard' | 'transactions' | 'import' | 'ana
 const navigationItems: Array<{ view: AppView; label: string; icon: LucideIcon }> = [
   { view: 'dashboard', label: 'Dashboard', icon: ChartNoAxesCombined },
   { view: 'transactions', label: 'Movimenti', icon: ListMinus },
-  { view: 'capture', label: 'Importa', icon: Camera },
+  { view: 'capture', label: 'Aggiungi', icon: Plus },
   { view: 'analysis', label: 'Insights', icon: Lightbulb },
   { view: 'planning', label: 'Pianifica', icon: CalendarClock },
   { view: 'goals', label: 'INcentiva', icon: Target },
@@ -82,11 +82,12 @@ export function AppShell({
         <div className="flex min-w-0 items-stretch gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navigationItems.map(({ view, label, icon: Icon }) => {
             const isActive = activeView === view || (view === 'capture' && activeView === 'import')
+            const isAddAction = view === 'capture'
 
             return (
               <button
                 key={view}
-                className={`group relative flex min-w-[4.6rem] flex-1 flex-col items-center justify-center gap-1 rounded-[1rem] px-2 py-2.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${isActive ? 'bg-white/[0.09] text-emerald-300 shadow-[inset_0_1px_rgba(255,255,255,0.06)]' : 'text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-200'}`}
+                className={`group relative flex min-w-[4.6rem] flex-1 flex-col items-center justify-center gap-1 rounded-[1rem] px-2 py-2.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${isAddAction ? '-my-1 border border-emerald-200/45 bg-emerald-400 text-emerald-950 shadow-[0_10px_28px_rgba(16,185,129,0.3),inset_0_1px_rgba(255,255,255,0.45)] hover:-translate-y-0.5 hover:bg-emerald-300' : isActive ? 'bg-white/[0.09] text-emerald-300 shadow-[inset_0_1px_rgba(255,255,255,0.06)]' : 'text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-200'}`}
                 type="button"
                 aria-current={isActive ? 'page' : undefined}
                 onPointerEnter={view === 'capture' ? () => {
@@ -99,9 +100,9 @@ export function AppShell({
                   onViewChange(target)
                 }}
               >
-                <Icon className={`size-5 transition-transform duration-500 group-hover:-translate-y-0.5 ${isActive ? 'drop-shadow-[0_0_10px_rgba(52,211,153,0.45)]' : ''}`} aria-hidden="true" />
-                <span className="font-data text-[0.6rem] font-medium tracking-tight">{label}</span>
-                {isActive && <span className="absolute bottom-0.5 h-0.5 w-4 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />}
+                <Icon className={`${isAddAction ? 'size-6 stroke-[2.5]' : 'size-5'} transition-transform duration-500 group-hover:-translate-y-0.5 ${isActive && !isAddAction ? 'drop-shadow-[0_0_10px_rgba(52,211,153,0.45)]' : ''}`} aria-hidden="true" />
+                <span className={`font-data text-[0.6rem] tracking-tight ${isAddAction ? 'font-bold' : 'font-medium'}`}>{label}</span>
+                {isActive && !isAddAction && <span className="absolute bottom-0.5 h-0.5 w-4 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />}
               </button>
             )
           })}

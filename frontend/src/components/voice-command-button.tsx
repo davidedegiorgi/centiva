@@ -24,7 +24,11 @@ interface SpeechRecognitionLike {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike
 type SpeechWindow = Window & typeof globalThis & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor }
 
-export function VoiceCommandButton() {
+interface VoiceCommandButtonProps {
+  placement?: 'header' | 'camera'
+}
+
+export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const [isListening, setIsListening] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -97,9 +101,19 @@ export function VoiceCommandButton() {
 
   return (
     <>
-      <Button className={isListening ? 'bg-emerald-400 text-black hover:bg-emerald-300' : ''} variant={isListening ? 'default' : 'ghost'} type="button" onClick={startListening} aria-label={isListening ? 'Interrompi registrazione vocale' : 'Registra movimento con la voce'} aria-pressed={isListening}>
-        {isListening ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
-        <span className="hidden lg:inline">Registra con la voce</span>
+      <Button
+        className={placement === 'camera'
+          ? `size-12 rounded-full border border-white/20 bg-black/50 p-0 text-white shadow-[0_12px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl hover:bg-emerald-400 hover:text-black ${isListening ? 'border-emerald-200 bg-emerald-400 text-black shadow-[0_0_30px_rgba(52,211,153,0.4)]' : ''}`
+          : isListening ? 'bg-emerald-400 text-black hover:bg-emerald-300' : ''}
+        variant={placement === 'camera' ? 'outline' : isListening ? 'default' : 'ghost'}
+        size={placement === 'camera' ? 'icon' : 'default'}
+        type="button"
+        onClick={startListening}
+        aria-label={isListening ? 'Interrompi registrazione vocale' : 'Registra movimento con la voce'}
+        aria-pressed={isListening}
+      >
+        {isListening ? <MicOff className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" /> : <Mic className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" />}
+        {placement === 'header' && <span className="hidden lg:inline">Registra con la voce</span>}
       </Button>
 
       {message && <div className="fixed left-1/2 top-20 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-2xl border border-white/15 bg-[#090c0a]/95 px-4 py-3 text-center text-sm text-zinc-200 shadow-2xl backdrop-blur-xl" role="status"><span className="inline-flex items-center gap-2">{message.startsWith('Movimento') && <Check className="size-4 text-emerald-300" />}{message}</span><button className="ml-3 text-emerald-300" type="button" onClick={() => setMessage(null)}>Chiudi</button></div>}
