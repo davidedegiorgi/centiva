@@ -180,7 +180,12 @@ export const transactionApi = {
     return stateChangingRequest<TransactionResponse>(
       '/api/v1/transactions',
       'POST',
-      payload,
+      {
+        ...payload,
+        // Compatibilità temporanea con il backend Render precedente.
+        // Non è un campo utente e il backend aggiornato lo ignora.
+        description: 'Movimento',
+      },
     )
   },
 
@@ -191,7 +196,10 @@ export const transactionApi = {
     return stateChangingRequest<TransactionResponse>(
       `/api/v1/transactions/${id}`,
       'PATCH',
-      payload,
+      {
+        ...payload,
+        description: 'Movimento',
+      },
     )
   },
 
