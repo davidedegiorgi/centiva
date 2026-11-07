@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\EmailVerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class RegisteredUserController extends Controller
 {
@@ -15,17 +16,26 @@ class RegisteredUserController extends Controller
         RegisterRequest $request,
         EmailVerificationService $verificationService,
     ): JsonResponse {
-        $user = DB::transaction(function () use ($request, $verificationService): User {
-            $user = User::query()->create($request->safe()->only([
-                'name',
-                'email',
-                'password',
-            ]));
+        try {
+            $user = DB::transaction(function () use ($request, $verificationService): User {
+                $user = User::query()->create($request->safe()->only([
+                    'name',
+                    'email',
+                    'password',
+                ]));
 
-            $verificationService->issue($user);
+                $verificationService->issue($user);
 
-            return $user;
-        });
+                return $user;
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Non siamo riusciti a inviare il codice. Riprova tra poco.',
+                'code' => 'verification_email_delivery_failed',
+            ], 503);
+        }
 
         return response()->json([
             'message' => 'Ti abbiamo inviato un codice di verifica a 6 cifre.',

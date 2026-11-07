@@ -4,8 +4,11 @@ namespace Tests\Feature\Api\V1\Auth;
 
 use App\Models\User;
 use App\Notifications\VerifyEmailCode;
+use App\Services\EmailVerificationService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class RegisteredUserControllerTest extends TestCase
@@ -56,6 +59,23 @@ class RegisteredUserControllerTest extends TestCase
             ->assertJsonValidationErrors(['password']);
 
         $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_email_delivery_failure_returns_503_without_leaving_an_incomplete_user(): void
+    {
+        $verificationService = Mockery::mock(EmailVerificationService::class);
+        $verificationService->shouldReceive('issue')->once()->andThrow(new RuntimeException('SMTP unavailable'));
+        $this->app->instance(EmailVerificationService::class, $verificationService);
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Giulia Bianchi',
+            'email' => 'giulia@example.com',
+            'password' => 'SecurePass1!',
+            'password_confirmation' => 'SecurePass1!',
+        ])->assertServiceUnavailable()
+            ->assertJsonPath('code', 'verification_email_delivery_failed');
+
+        $this->assertDatabaseMissing('users', ['email' => 'giulia@example.com']);
     }
 
     public function test_duplicate_email_returns_422_and_does_not_create_user(): void
