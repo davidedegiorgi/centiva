@@ -98,8 +98,16 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
 
       {error && <Alert variant="destructive"><AlertTitle>Aggiornamento non riuscito</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>}
 
-      <section className="grid gap-3 md:grid-cols-3" aria-label="Riepilogo del mese">
-        <Card className="border-emerald-400/20 bg-[#0b0d0c] shadow-[inset_0_1px_rgba(255,255,255,0.08),0_26px_70px_-48px_rgba(16,185,129,0.7)]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-4 sm:p-6"><p className="text-sm text-emerald-200">Risultato del mese</p><LiquidNumber className="text-2xl font-semibold text-emerald-200 sm:text-4xl" value={dashboard.summary.net_savings} currency={dashboard.currency} /></CardContent></Card>
+      <section className="group relative isolate overflow-hidden border-y border-white/10 py-9 sm:py-14" aria-label="Risultato del mese">
+        <div className="pointer-events-none absolute left-[12%] top-1/2 -z-10 size-44 -translate-y-1/2 rounded-full bg-emerald-400/15 blur-[90px] transition-[transform,opacity] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-150 group-hover:opacity-80 sm:size-64" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-px bg-white/10" aria-hidden="true" />
+        <div className="flex flex-col gap-5 sm:gap-7">
+          <p className="font-data text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-emerald-300">Risultato del mese</p>
+          <LiquidNumber className="dashboard-result-number block whitespace-nowrap text-[clamp(2.8rem,10vw,8.5rem)] font-black leading-[0.82] tracking-[-0.075em] text-white drop-shadow-[0_10px_34px_rgba(255,255,255,0.12)] transition-[letter-spacing,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1 group-hover:tracking-[-0.055em]" value={dashboard.summary.net_savings} currency={dashboard.currency} />
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2" aria-label="Entrate e uscite del mese">
         <Card className="border-white/10 bg-[#0b0d0c]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-5 sm:p-6"><div className="flex items-center gap-2 text-sm text-emerald-200"><span className="grid size-8 place-items-center rounded-lg bg-emerald-500/10"><TrendingUp className="size-4" aria-hidden="true" /></span>Entrate del mese</div><LiquidNumber className="text-2xl font-semibold sm:text-4xl" value={dashboard.summary.income} currency={dashboard.currency} /></CardContent></Card>
         <Card className="border-white/10 bg-[#0b0d0c]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-5 sm:p-6"><div className="flex items-center gap-2 text-sm text-zinc-300"><span className="grid size-8 place-items-center rounded-lg bg-white/5"><TrendingDown className="size-4" aria-hidden="true" /></span>Uscite del mese</div><LiquidNumber className="text-2xl font-semibold sm:text-4xl" value={dashboard.summary.expenses} currency={dashboard.currency} /></CardContent></Card>
       </section>

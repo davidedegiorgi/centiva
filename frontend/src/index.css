@@ -16,6 +16,10 @@
   animation: capture-balance-burst 1.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.dashboard-result-number {
+  font-family: 'Syne Variable', 'Geist Variable', sans-serif;
+}
+
 @keyframes camera-scan-line {
   0% { top: 0%; opacity: 0; }
   8% { opacity: 1; }
