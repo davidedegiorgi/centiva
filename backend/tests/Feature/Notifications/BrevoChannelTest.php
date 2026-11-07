@@ -29,4 +29,18 @@ class BrevoChannelTest extends TestCase
             && $request['subject'] === 'Il tuo codice di verifica Centiva'
             && str_contains($request['htmlContent'], '123456'));
     }
+
+    public function test_channel_removes_accidental_quotes_from_the_api_key(): void
+    {
+        config()->set('services.brevo.api_key', '  "test-api-key"  ');
+        config()->set('services.brevo.url', 'https://api.brevo.com');
+        Http::fake(['api.brevo.com/v3/smtp/email' => Http::response(['messageId' => 'test-id'], 201)]);
+
+        (new BrevoChannel)->send(
+            User::factory()->make(['email' => 'giulia@example.com']),
+            new VerifyEmailCode('123456', 10),
+        );
+
+        Http::assertSent(fn (Request $request): bool => $request->hasHeader('api-key', 'test-api-key'));
+    }
 }

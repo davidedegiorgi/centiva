@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\AccountEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -14,6 +15,22 @@ use Throwable;
 
 class GoogleAuthController extends Controller
 {
+    /**
+     * Supports an OAuth redirect URI set to the service root as well as the
+     * documented /auth/google/callback path. It prevents a legacy Google
+     * client configuration from leaving the user on Laravel's welcome page.
+     */
+    public function landing(
+        Request $request,
+        AccountEmailService $accountEmailService,
+    ): View|RedirectResponse {
+        if ($request->query->has('code') || $request->query->has('error')) {
+            return $this->callback($request, $accountEmailService);
+        }
+
+        return view('welcome');
+    }
+
     public function redirect(): RedirectResponse
     {
         if (! $this->isConfigured()) {

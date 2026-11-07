@@ -111,4 +111,22 @@ class GoogleAuthControllerTest extends TestCase
         $this->get('/auth/google/redirect')
             ->assertRedirect('http://localhost:5173?auth_error=Accesso+con+Google+non+ancora+configurato.');
     }
+
+    public function test_root_forwards_an_oauth_callback_instead_of_showing_the_laravel_welcome_page(): void
+    {
+        $googleUser = (new GoogleUser)->setRaw([
+            'email_verified' => true,
+        ])->map([
+            'id' => 'google-root-callback',
+            'name' => 'Root Callback',
+            'email' => 'root@example.com',
+        ]);
+
+        $provider = Mockery::mock();
+        $provider->shouldReceive('user')->once()->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturn($provider);
+
+        $this->get('/?code=oauth-code&state=oauth-state')
+            ->assertRedirect('http://localhost:5173?auth=google');
+    }
 }

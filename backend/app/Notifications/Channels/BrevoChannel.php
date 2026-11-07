@@ -4,6 +4,7 @@ namespace App\Notifications\Channels;
 
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class BrevoChannel
@@ -14,7 +15,12 @@ class BrevoChannel
             throw new RuntimeException('La notifica non definisce il contenuto email.');
         }
 
-        $apiKey = (string) config('services.brevo.api_key');
+        // Render preserves pasted quotes and whitespace. Brevo considers them
+        // part of the key and responds with a generic 401, so remove only
+        // accidental wrappers before making the request.
+        $apiKey = trim((string) config('services.brevo.api_key'));
+        $apiKey = trim($apiKey, "\"'");
+        $apiKey = preg_replace('/^Bearer\s+/i', '', $apiKey) ?? $apiKey;
         if ($apiKey === '') {
             throw new RuntimeException('BREVO_API_KEY non configurata.');
         }
@@ -25,7 +31,7 @@ class BrevoChannel
             throw new RuntimeException('La notifica non ha un destinatario email.');
         }
 
-        Http::acceptJson()
+        $response = Http::acceptJson()
             ->withHeaders(['api-key' => $apiKey])
             ->connectTimeout(3)
             ->timeout(8)
@@ -37,8 +43,16 @@ class BrevoChannel
                 'to' => $recipients,
                 'subject' => (string) $mail->subject,
                 'htmlContent' => $mail->render()->toHtml(),
-            ])
-            ->throw();
+            ]);
+
+        if ($response->failed()) {
+            Log::warning('Brevo ha rifiutato l’invio dell’email transazionale.', [
+                'status' => $response->status(),
+                'response' => $response->json(),
+            ]);
+
+            $response->throw();
+        }
     }
 
     /** @return array<int, array{email: string, name?: string}> */
