@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AnalysisController;
 use App\Http\Controllers\Api\V1\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\V1\BulkDeleteTransactionController;
@@ -24,6 +25,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/login', [AuthenticatedSessionController::class, 'store'])
             ->middleware('throttle:login')
             ->name('login');
+
+        Route::post('/verify-email', [EmailVerificationController::class, 'store'])
+            ->middleware('throttle:verify-email')
+            ->name('email.verify');
+
+        Route::post('/resend-verification', [EmailVerificationController::class, 'resend'])
+            ->middleware('throttle:resend-verification')
+            ->name('email.resend');
 
         Route::post('/forgot-password', [PasswordResetController::class, 'store'])
             ->middleware('throttle:forgot-password')

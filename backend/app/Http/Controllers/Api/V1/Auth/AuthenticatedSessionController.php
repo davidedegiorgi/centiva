@@ -23,6 +23,16 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        if ($request->user()?->email_verified_at === null) {
+            Auth::guard('web')->logout();
+
+            return response()->json([
+                'message' => 'Verifica il tuo indirizzo email prima di accedere.',
+                'code' => 'email_verification_required',
+                'email' => $request->string('email')->toString(),
+            ], 403);
+        }
+
         $request->session()->regenerate();
 
         return (new UserResource($request->user()))->response();

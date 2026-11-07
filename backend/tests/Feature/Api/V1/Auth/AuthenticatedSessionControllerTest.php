@@ -56,6 +56,22 @@ class AuthenticatedSessionControllerTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_unverified_user_must_confirm_email_before_login(): void
+    {
+        User::factory()->unverified()->create([
+            'email' => 'mario@example.com',
+            'password' => 'SecurePass1!',
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'mario@example.com',
+            'password' => 'SecurePass1!',
+        ])->assertForbidden()
+            ->assertJsonPath('code', 'email_verification_required');
+
+        $this->assertGuest();
+    }
+
     public function test_sixth_failed_login_for_same_email_and_ip_returns_429(): void
     {
         User::factory()->create(['email' => 'mario@example.com']);

@@ -3,7 +3,7 @@
 namespace Tests\Feature\Api\V1\Auth;
 
 use App\Models\User;
-use App\Notifications\WelcomeToCentiva;
+use App\Notifications\VerifyEmailCode;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -19,7 +19,7 @@ class RegisteredUserControllerTest extends TestCase
         $this->withHeader('Origin', 'http://localhost:5173');
     }
 
-    public function test_valid_payload_creates_user_authenticates_session_and_returns_201(): void
+    public function test_valid_payload_creates_unverified_user_and_sends_six_digit_code(): void
     {
         Notification::fake();
 
@@ -32,16 +32,17 @@ class RegisteredUserControllerTest extends TestCase
 
         $response
             ->assertCreated()
-            ->assertJsonPath('data.name', 'Giulia Bianchi')
-            ->assertJsonPath('data.email', 'giulia@example.com')
-            ->assertJsonMissingPath('data.password');
+            ->assertJsonPath('email', 'giulia@example.com')
+            ->assertJsonPath('verification_required', true);
 
         $user = User::query()->where('email', 'giulia@example.com')->firstOrFail();
 
-        $this->assertAuthenticatedAs($user);
+        $this->assertGuest();
         $this->assertModelExists($user);
         $this->assertNotSame('SecurePass1!', $user->password);
-        Notification::assertSentTo($user, WelcomeToCentiva::class);
+        $this->assertNull($user->email_verified_at);
+        $this->assertDatabaseHas('email_verification_codes', ['user_id' => $user->id, 'attempts' => 0]);
+        Notification::assertSentTo($user, VerifyEmailCode::class);
     }
 
     public function test_empty_payload_returns_422_with_required_field_messages(): void

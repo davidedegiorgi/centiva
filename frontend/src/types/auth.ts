@@ -17,6 +17,21 @@ export interface RegisterPayload {
   password_confirmation: string
 }
 
+export interface RegisterResponse {
+  message: string
+  email: string
+  verification_required: true
+}
+
+export interface VerifyEmailPayload {
+  email: string
+  code: string
+}
+
+export interface ResendVerificationPayload {
+  email: string
+}
+
 export interface LoginPayload {
   email: string
   password: string

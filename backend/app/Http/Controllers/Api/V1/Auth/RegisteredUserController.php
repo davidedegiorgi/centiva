@@ -4,30 +4,33 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
-use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
-use App\Services\AccountEmailService;
+use App\Services\EmailVerificationService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RegisteredUserController extends Controller
 {
     public function __invoke(
         RegisterRequest $request,
-        AccountEmailService $accountEmailService,
+        EmailVerificationService $verificationService,
     ): JsonResponse {
-        $user = User::query()->create($request->safe()->only([
-            'name',
-            'email',
-            'password',
-        ]));
+        $user = DB::transaction(function () use ($request, $verificationService): User {
+            $user = User::query()->create($request->safe()->only([
+                'name',
+                'email',
+                'password',
+            ]));
 
-        Auth::login($user, true);
-        $request->session()->regenerate();
-        $accountEmailService->sendWelcome($user);
+            $verificationService->issue($user);
 
-        return (new UserResource($user))
-            ->response()
-            ->setStatusCode(201);
+            return $user;
+        });
+
+        return response()->json([
+            'message' => 'Ti abbiamo inviato un codice di verifica a 6 cifre.',
+            'email' => $user->email,
+            'verification_required' => true,
+        ], 201);
     }
 }

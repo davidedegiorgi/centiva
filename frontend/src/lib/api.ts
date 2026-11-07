@@ -3,9 +3,12 @@ import type {
   ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
+  RegisterResponse,
+  ResendVerificationPayload,
   ResetPasswordPayload,
   UpdateProfilePayload,
   UserResponse,
+  VerifyEmailPayload,
 } from '@/types/auth'
 import type {
   TransactionFilters,
@@ -29,16 +32,19 @@ type ValidationErrors = Record<string, string[]>
 export class ApiError extends Error {
   readonly status: number
   readonly errors: ValidationErrors
+  readonly code: string | null
 
   constructor(
     message: string,
     status: number,
     errors: ValidationErrors = {},
+    code: string | null = null,
   ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.errors = errors
+    this.code = code
   }
 }
 
@@ -72,6 +78,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const payload = (await response.json().catch(() => null)) as {
     message?: string
     errors?: ValidationErrors
+    code?: string
   } | null
 
   if (!response.ok) {
@@ -79,6 +86,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       payload?.message ?? 'Non è stato possibile completare la richiesta.',
       response.status,
       payload?.errors,
+      payload?.code ?? null,
     )
   }
 
@@ -116,12 +124,20 @@ export const authApi = {
     return request<UserResponse>('/api/v1/profile')
   },
 
-  async register(payload: RegisterPayload): Promise<UserResponse> {
-    return stateChangingRequest<UserResponse>(
+  async register(payload: RegisterPayload): Promise<RegisterResponse> {
+    return stateChangingRequest<RegisterResponse>(
       '/api/v1/auth/register',
       'POST',
       payload,
     )
+  },
+
+  async verifyEmail(payload: VerifyEmailPayload): Promise<UserResponse> {
+    return stateChangingRequest<UserResponse>('/api/v1/auth/verify-email', 'POST', payload)
+  },
+
+  async resendVerification(payload: ResendVerificationPayload): Promise<{ message: string }> {
+    return stateChangingRequest<{ message: string }>('/api/v1/auth/resend-verification', 'POST', payload)
   },
 
   async login(payload: LoginPayload): Promise<UserResponse> {

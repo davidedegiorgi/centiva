@@ -5,12 +5,25 @@ namespace Tests\Feature\Notifications;
 use App\Models\User;
 use App\Notifications\AccountDeleted;
 use App\Notifications\ResetCentivaPassword;
+use App\Notifications\VerifyEmailCode;
 use App\Notifications\WelcomeToCentiva;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Tests\TestCase;
 
 class AccountNotificationTest extends TestCase
 {
+    public function test_verification_email_contains_six_digit_code_and_expiration(): void
+    {
+        $user = User::factory()->make(['name' => 'Giulia Bianchi']);
+        $mail = (new VerifyEmailCode('123456', 10))->toMail($user);
+        $html = $mail->render()->toHtml();
+
+        $this->assertSame('Il tuo codice di verifica Centiva', $mail->subject);
+        $this->assertStringContainsString('123456', $html);
+        $this->assertStringContainsString('10 minuti', $html);
+        $this->assertStringContainsString('Non comunicare il codice a nessuno', $html);
+    }
+
     public function test_welcome_email_contains_centiva_onboarding_content(): void
     {
         config()->set('app.frontend_url', 'https://centiva.vercel.app');

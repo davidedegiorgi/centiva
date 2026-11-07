@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, LockKeyhole, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { BrandLogo } from '@/components/brand-logo'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { ApiError, authApi } from '@/lib/api'
 import type { User } from '@/types/auth'
 
-type AuthMode = 'login' | 'register' | 'forgot' | 'reset'
+type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset'
 
 interface AuthFormProps {
   onAuthenticated: (user: User) => void
@@ -83,6 +83,7 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
   const [email, setEmail] = useState(initialParams.get('email') ?? '')
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
@@ -95,6 +96,7 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
   const isRegister = mode === 'register'
   const isForgot = mode === 'forgot'
   const isReset = mode === 'reset'
+  const isVerify = mode === 'verify'
 
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -135,22 +137,56 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
         return
       }
 
-      const response = isRegister
-        ? await authApi.register({
-            name,
-            email,
-            password,
-            password_confirmation: passwordConfirmation,
-          })
-        : await authApi.login({ email, password, remember: true })
+      if (isVerify) {
+        const response = await authApi.verifyEmail({ email, code: verificationCode })
+        onAuthenticated(response.data)
+        return
+      }
 
+      if (isRegister) {
+        const response = await authApi.register({
+          name,
+          email,
+          password,
+          password_confirmation: passwordConfirmation,
+        })
+        setEmail(response.email)
+        setPassword('')
+        setPasswordConfirmation('')
+        setMode('verify')
+        setSuccess(response.message)
+        return
+      }
+
+      const response = await authApi.login({ email, password, remember: true })
       onAuthenticated(response.data)
     } catch (caughtError) {
+      if (caughtError instanceof ApiError && caughtError.code === 'email_verification_required') {
+        setMode('verify')
+        setPassword('')
+        setSuccess('Inserisci il codice ricevuto via email per completare la verifica.')
+        return
+      }
       setError(
         caughtError instanceof ApiError
           ? caughtError
           : new ApiError('Si è verificato un errore inatteso.', 500),
       )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function resendVerificationCode() {
+    setError(null)
+    setSuccess(null)
+    setIsSubmitting(true)
+
+    try {
+      const response = await authApi.resendVerification({ email })
+      setSuccess(response.message)
+    } catch (caughtError) {
+      setError(caughtError instanceof ApiError ? caughtError : new ApiError('Non è stato possibile inviare un nuovo codice.', 500))
     } finally {
       setIsSubmitting(false)
     }
@@ -162,12 +198,15 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
     setSuccess(null)
     setPassword('')
     setPasswordConfirmation('')
+    setVerificationCode('')
     setShowPassword(false)
     setShowConfirmation(false)
   }
 
   const title = isRegister
     ? 'Crea il tuo account'
+    : isVerify
+      ? 'Verifica la tua email'
     : isForgot
       ? 'Recupera la password'
       : isReset
@@ -176,6 +215,8 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
 
   const description = isRegister
     ? 'Inizia a costruire una visione più chiara delle tue finanze.'
+    : isVerify
+      ? `Inserisci il codice di 6 cifre inviato a ${email}.`
     : isForgot
       ? 'Inserisci la tua email. Se è associata a un account, riceverai il link di recupero.'
       : isReset
@@ -184,6 +225,8 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
 
   const submitLabel = isRegister
     ? 'Crea account'
+    : isVerify
+      ? 'Verifica e accedi'
     : isForgot
       ? 'Invia link di recupero'
       : isReset
@@ -222,7 +265,7 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
 
           <Card className="border-white/10 bg-card shadow-[0_24px_70px_-36px_rgba(15,45,34,0.35)]">
             <CardHeader className="gap-2">
-              {(isForgot || isReset) && (
+              {(isForgot || isReset || isVerify) && (
                 <button
                   className="mb-2 flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
                   type="button"
@@ -237,7 +280,7 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
             </CardHeader>
 
             <CardContent>
-              {!isForgot && !isReset && (
+              {!isForgot && !isReset && !isVerify && (
                 <>
                   <Button
                     className="h-11 w-full border-white/15 bg-white/[0.06] text-white hover:bg-white/[0.1] hover:text-white"
@@ -303,12 +346,37 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
                     autoComplete="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
+                    readOnly={isVerify}
                     aria-invalid={Boolean(error?.errors.email)}
                   />
                   <FieldError errors={error?.errors.email} />
                 </div>
 
-                {!isForgot && (
+                {isVerify && (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="verification-code">Codice di verifica</Label>
+                    <div className="relative">
+                      <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-emerald-300" aria-hidden="true" />
+                      <Input
+                        className="h-12 pl-11 text-center font-data text-xl tracking-[0.38em]"
+                        id="verification-code"
+                        name="verification_code"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        pattern="[0-9]{6}"
+                        value={verificationCode}
+                        onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                        aria-invalid={Boolean(error?.errors.code)}
+                        autoFocus
+                      />
+                    </div>
+                    <FieldError errors={error?.errors.code} />
+                    <p className="text-xs leading-5 text-muted-foreground">Il codice scade dopo 10 minuti e può essere usato una sola volta.</p>
+                  </div>
+                )}
+
+                {!isForgot && !isVerify && (
                   <PasswordField
                     id="password"
                     label={isReset ? 'Nuova password' : 'Password'}
@@ -360,9 +428,20 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
                   )}
                   {submitLabel}
                 </Button>
+
+                {isVerify && (
+                  <button
+                    className="text-sm font-medium text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => void resendVerificationCode()}
+                  >
+                    Non hai ricevuto il codice? Invia di nuovo
+                  </button>
+                )}
               </form>
 
-              {!isForgot && !isReset && (
+              {!isForgot && !isReset && !isVerify && (
                 <p className="mt-6 text-center text-sm text-muted-foreground">
                   {isRegister ? 'Hai già un account?' : 'Non hai ancora un account?'}{' '}
                   <button
