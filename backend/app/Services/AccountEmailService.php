@@ -16,11 +16,6 @@ class AccountEmailService
         $this->sendSafely(fn () => $user->notify(new WelcomeToCentiva));
     }
 
-    public function sendWelcomeAfterResponse(User $user): void
-    {
-        app()->terminating(fn () => $this->sendWelcome($user));
-    }
-
     public function sendDeletionConfirmation(string $email, string $name): void
     {
         $deletedAt = now()
@@ -29,11 +24,6 @@ class AccountEmailService
 
         $this->sendSafely(fn () => Notification::route('mail', [$email => $name])
             ->notify(new AccountDeleted($name, $deletedAt)));
-    }
-
-    public function sendDeletionConfirmationAfterResponse(string $email, string $name): void
-    {
-        app()->terminating(fn () => $this->sendDeletionConfirmation($email, $name));
     }
 
     private function sendSafely(Closure $send): void
