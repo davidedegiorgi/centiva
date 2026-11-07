@@ -4,8 +4,8 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist
 
 FROM php:8.4-cli-alpine
-RUN apk add --no-cache libpq-dev \
-    && docker-php-ext-install pdo_pgsql \
+RUN apk add --no-cache curl-dev libpq-dev \
+    && docker-php-ext-install curl pdo_pgsql \
     && rm -rf /tmp/*
 WORKDIR /app
 COPY --from=vendor /app/vendor ./vendor
