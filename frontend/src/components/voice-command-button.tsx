@@ -23,10 +23,11 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike
 type SpeechWindow = Window & typeof globalThis & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor }
 
 interface VoiceCommandButtonProps {
-  placement?: 'header' | 'camera'
+  placement?: 'header' | 'camera' | 'transactions'
+  onSaved?: () => void
 }
 
-export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonProps) {
+export function VoiceCommandButton({ placement = 'header', onSaved }: VoiceCommandButtonProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const processingTimerRef = useRef<number | null>(null)
   const [isListening, setIsListening] = useState(false)
@@ -100,6 +101,7 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
       window.dispatchEvent(new CustomEvent('centiva:transactions-changed', {
         detail: { transaction: response.data },
       }))
+      onSaved?.()
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Non è stato possibile registrare il movimento.')
     } finally {
@@ -112,8 +114,12 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
       <Button
         className={placement === 'camera'
           ? `size-12 rounded-full border border-white/20 bg-black/50 p-0 text-white shadow-[0_12px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl hover:bg-emerald-400 hover:text-black ${isListening ? 'border-emerald-200 bg-emerald-400 text-black shadow-[0_0_30px_rgba(52,211,153,0.4)]' : ''}`
-          : isListening ? 'bg-emerald-400 text-black hover:bg-emerald-300' : ''}
-        variant={placement === 'camera' ? 'outline' : isListening ? 'default' : 'ghost'}
+          : placement === 'transactions'
+            ? isListening
+              ? 'h-10 border-emerald-300 bg-emerald-400 px-4 text-emerald-950 hover:bg-emerald-300'
+              : 'h-10 border-white/15 bg-white/[0.04] px-4 text-foreground hover:border-emerald-300/40 hover:bg-emerald-400/10 hover:text-emerald-200'
+            : isListening ? 'bg-emerald-400 text-black hover:bg-emerald-300' : ''}
+        variant={placement === 'camera' || placement === 'transactions' ? 'outline' : isListening ? 'default' : 'ghost'}
         size={placement === 'camera' ? 'icon' : 'default'}
         type="button"
         onClick={startListening}
@@ -123,6 +129,7 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
       >
         {isProcessing ? <LoaderCircle className={`${placement === 'camera' ? 'size-5' : ''} animate-spin`} aria-hidden="true" /> : isListening ? <MicOff className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" /> : <Mic className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" />}
         {placement === 'header' && <span className="hidden lg:inline">Registra con la voce</span>}
+        {placement === 'transactions' && <span>Voce</span>}
       </Button>
 
       {createPortal(<>

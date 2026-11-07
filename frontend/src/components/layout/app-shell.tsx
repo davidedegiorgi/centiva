@@ -3,7 +3,6 @@ import { CalendarClock, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle,
 
 import { BrandLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
-import { VoiceCommandButton } from '@/components/voice-command-button'
 import type { User } from '@/types/auth'
 
 export type AppView = 'capture' | 'dashboard' | 'transactions' | 'import' | 'analysis' | 'planning' | 'profile'
@@ -57,7 +56,6 @@ export function AppShell({
             <span className="hidden max-w-40 truncate text-sm text-muted-foreground md:block">
               {user.name}
             </span>
-            <VoiceCommandButton />
             <Button
               variant="ghost"
               type="button"

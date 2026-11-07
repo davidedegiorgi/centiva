@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { VoiceCommandButton } from '@/components/voice-command-button'
 import { ApiError, transactionApi } from '@/lib/api'
 import type {
   PaginationMeta,
@@ -157,6 +158,12 @@ export function TransactionsPage() {
     setRefreshKey((value) => value + 1)
   }
 
+  function handleVoiceSaved() {
+    setIsLoading(true)
+    setError(null)
+    setRefreshKey((value) => value + 1)
+  }
+
   function toggleSelection(id: string) {
     setSelectedIds((current) => {
       const next = new Set(current)
@@ -227,6 +234,7 @@ export function TransactionsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <VoiceCommandButton placement="transactions" onSaved={handleVoiceSaved} />
           <Button
             className="h-10 bg-emerald-600 px-4 text-white hover:bg-emerald-700"
             type="button"
