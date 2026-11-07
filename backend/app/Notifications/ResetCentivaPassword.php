@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Notifications\Channels\BrevoChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -21,7 +20,7 @@ class ResetCentivaPassword extends Notification
      */
     public function via(object $notifiable): array
     {
-        return [BrevoChannel::class];
+        return ['mail'];
     }
 
     /**
