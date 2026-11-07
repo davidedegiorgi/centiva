@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, Camera, CheckCircle2, FileScan, FileSpreadsheet, ImageUp, LoaderCircle, Maximize2, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { AlertCircle, Camera, CheckCircle2, FileScan, LoaderCircle, Maximize2, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -138,7 +138,6 @@ export function ImportPage() {
       <div className="mb-7">
         <p className="text-sm font-medium text-emerald-300">Importazione intelligente</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Dal documento ai movimenti</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">Carica un CSV oppure una foto. Controlla sempre i dati riconosciuti prima di salvarli.</p>
       </div>
 
       <Card className="border-0 shadow-sm">
@@ -175,10 +174,6 @@ export function ImportPage() {
           </div>
           <input ref={fileInput} className="sr-only" type="file" accept=".csv,text/csv,image/jpeg,image/png,image/webp" onChange={(event) => event.target.files?.[0] && void handleFile(event.target.files[0])} />
           <input ref={cameraInput} className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => event.target.files?.[0] && void handleFile(event.target.files[0])} />
-          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><FileSpreadsheet className="size-4" /> Colonne italiane o inglesi</span>
-            <span className="flex items-center gap-1.5"><ImageUp className="size-4" /> Foto dritta e ben illuminata</span>
-          </div>
         </CardContent>
       </Card>
 

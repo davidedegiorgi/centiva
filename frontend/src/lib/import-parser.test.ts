@@ -217,6 +217,34 @@ describe('parseOcrText', () => {
     expect(rows).toEqual([])
   })
 
+  it('does not invent a total from item prices or fiscal codes when payment labels are unreadable', () => {
+    const rows = parseOcrText(`
+      EMPORIO CENTRALE
+      DOCUMENTO COMMERCIALE
+      ARTICOLO 30,00
+      ARTICOLO 9,00
+      1VA 3,55
+      CODICE TRANSAZIONE 999,99
+      TOTALE ILLEGGIBILE
+    `)
+
+    expect(rows).toEqual([])
+  })
+
+  it('recognizes a corrupted total label printed above the amount', () => {
+    const rows = parseOcrText(`
+      SUPERMERCATO CENTRALE
+      DOCUMENTO COMMERCIALE
+      ARTICOLO 18,20
+      T0TA1E DA PAGARE
+      48,70 EUR
+      1VA 4,43
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '48.70', category: 'Spesa' })
+  })
+
   it('does not mistake a comma-corrupted receipt date for a price', () => {
     const rows = parseOcrText(`
       CASEIFICIO LA GRAZIA

@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button'
 import { ApiError, transactionApi } from '@/lib/api'
 import { parseVoiceTransaction, voiceCommandExamples, type VoiceTransactionDraft } from '@/lib/voice-command'
 
-interface SpeechRecognitionEventLike { results: ArrayLike<{ 0: { transcript: string } }> }
+interface SpeechRecognitionResultLike extends ArrayLike<{ transcript: string }> { length: number }
+interface SpeechRecognitionEventLike { results: ArrayLike<SpeechRecognitionResultLike> }
 interface SpeechRecognitionErrorEventLike { error: string }
 interface SpeechRecognitionLike {
   lang: string
   continuous: boolean
   interimResults: boolean
+  maxAlternatives: number
   onresult: ((event: SpeechRecognitionEventLike) => void) | null
   onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null
   onend: (() => void) | null
@@ -56,8 +58,11 @@ export function VoiceCommandButton({ placement = 'header', onSaved }: VoiceComma
     recognition.lang = 'it-IT'
     recognition.continuous = false
     recognition.interimResults = false
+    recognition.maxAlternatives = 5
     recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? ''
+      const result = event.results[event.results.length - 1]
+      const alternatives = Array.from({ length: result?.length ?? 0 }, (_, index) => result?.[index]?.transcript?.trim() ?? '').filter(Boolean)
+      const transcript = alternatives.find((alternative) => parseVoiceTransaction(alternative)) ?? alternatives[0] ?? ''
       setMessage(null)
       setIsProcessing(true)
       processingTimerRef.current = window.setTimeout(() => {
@@ -65,7 +70,7 @@ export function VoiceCommandButton({ placement = 'header', onSaved }: VoiceComma
         setIsProcessing(false)
         processingTimerRef.current = null
         if (!parsed) {
-          setMessage(`Non ho riconosciuto tipo e importo. ${voiceCommandExamples}`)
+          setMessage(`Non ho riconosciuto l’importo. ${voiceCommandExamples}`)
           return
         }
         setDraft(parsed)
@@ -79,7 +84,7 @@ export function VoiceCommandButton({ placement = 'header', onSaved }: VoiceComma
     }
     recognition.onend = () => { setIsListening(false); recognitionRef.current = null }
     recognitionRef.current = recognition
-    setMessage('Ti ascolto… puoi dire semplicemente “50 spesa”.')
+    setMessage('Ti ascolto… puoi dire importo, categoria o tipo di movimento nell’ordine che preferisci.')
     setIsListening(true)
     recognition.start()
   }

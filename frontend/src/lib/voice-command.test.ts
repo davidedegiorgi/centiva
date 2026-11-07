@@ -41,8 +41,37 @@ describe('parseVoiceTransaction', () => {
     })
   })
 
-  it('requires both movement type and amount', () => {
+  it('defaults an amount-only command to an expense', () => {
+    expect(parseVoiceTransaction('venticinque euro', now)).toMatchObject({
+      type: 'expense', amount: 25, currency: 'EUR', category: 'Altro',
+    })
+  })
+
+  it('understands natural phrases and infers their categories', () => {
+    expect(parseVoiceTransaction('ho speso cinquanta euro al ristorante', now)).toMatchObject({
+      type: 'expense', amount: 50, category: 'Ristorazione',
+    })
+    expect(parseVoiceTransaction('trenta euro farmacia', now)).toMatchObject({
+      type: 'expense', amount: 30, category: 'Salute',
+    })
+    expect(parseVoiceTransaction('benzina 45', now)).toMatchObject({
+      type: 'expense', amount: 45, category: 'Trasporti',
+    })
+    expect(parseVoiceTransaction('ho incassato duecento euro', now)).toMatchObject({
+      type: 'income', amount: 200, category: 'Entrate',
+    })
+  })
+
+  it('does not confuse an explicit calendar day with the amount', () => {
+    expect(parseVoiceTransaction('il 2 novembre ho speso cinquanta euro al ristorante', now)).toMatchObject({
+      type: 'expense', amount: 50, occurred_on: '2026-11-02', category: 'Ristorazione',
+    })
+    expect(parseVoiceTransaction('il 2 novembre benzina 45', now)).toMatchObject({
+      type: 'expense', amount: 45, occurred_on: '2026-11-02', category: 'Trasporti',
+    })
+  })
+
+  it('requires an amount', () => {
     expect(parseVoiceTransaction('ho comprato qualcosa oggi', now)).toBeNull()
-    expect(parseVoiceTransaction('venticinque euro', now)).toBeNull()
   })
 })

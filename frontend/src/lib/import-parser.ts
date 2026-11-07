@@ -332,9 +332,19 @@ function isReceiptText(lines: string[]): boolean {
   return hasStrongReceiptSignal || (hasExplicitTotal && !hasBankMovementSignal) || hasReceiptStructure
 }
 
+function normalizeReceiptLabels(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/0/g, 'o')
+    .replace(/1/g, 'l')
+    .replace(/5/g, 's')
+    .replace(/\blva\b/g, 'iva')
+}
+
 function receiptScore(line: string, candidate: AmountCandidate): number {
-  const prefix = line.slice(Math.max(0, candidate.index - 64), candidate.index).toLowerCase()
-  const suffix = line.slice(candidate.index + candidate.raw.length, candidate.index + candidate.raw.length + 32).toLowerCase()
+  const normalizedLine = normalizeReceiptLabels(line)
+  const prefix = normalizedLine.slice(Math.max(0, candidate.index - 64), candidate.index)
+  const suffix = normalizedLine.slice(candidate.index + candidate.raw.length, candidate.index + candidate.raw.length + 32)
   let score = candidate.score
 
   if (/\b(?:iva|imposta|imponibile|subtotale|resto|sconto|risparmio|acconto|commissione|aliquota|di\s+cui|numero|codice|transazione|terminale|autorizzazione|lotteria|matricola)\b[^\d]*$/i.test(prefix)) {
@@ -345,12 +355,12 @@ function receiptScore(line: string, candidate: AmountCandidate): number {
     score += 100
   } else if (/\b(?:pagato|carta|bancomat|pos)\b[^\d]*$/i.test(prefix)) {
     score += 70
-  } else if (/\bcontanti\b[^\d]*$/i.test(prefix)) {
-    score += 20
+  } else if (/\bcontan[a-z]*\b[^\d]*$/i.test(prefix)) {
+    score += 55
   }
 
   if (/^\s*(?:totale|da\s+pagare)\b/i.test(suffix)) score += 90
-  if (/\b(?:iva|imponibile|subtotale|resto|sconto)\b/i.test(line) && score < 80) score -= 45
+  if (/\b(?:iva|imponibile|subtotale|resto|sconto)\b/i.test(normalizedLine) && score < 80) score -= 45
 
   return score
 }
@@ -358,7 +368,11 @@ function receiptScore(line: string, candidate: AmountCandidate): number {
 function receiptDraft(lines: string[]): ImportDraft | null {
   const candidates = lines.flatMap((line, lineIndex) => amountCandidates(line).flatMap((candidate): ReceiptAmountCandidate[] => {
     if (candidate.value <= 0 || Math.abs(candidate.value) > 100000) return []
-    return [{ ...candidate, lineIndex, receiptScore: receiptScore(line, candidate) }]
+    let score = receiptScore(line, candidate)
+    const precedingLabels = normalizeReceiptLabels(lines.slice(Math.max(0, lineIndex - 2), lineIndex).join(' '))
+    if (/(?:totale|importo\s+pagato|da\s+pagare)\s*$/i.test(precedingLabels)) score += 130
+    if (/(?:iva|imponibile|subtotale|resto|sconto)\s*$/i.test(precedingLabels)) score -= 120
+    return [{ ...candidate, lineIndex, receiptScore: score }]
   }))
   if (candidates.length === 0) return null
 
@@ -369,10 +383,8 @@ function receiptDraft(lines: string[]): ImportDraft | null {
 
   const explicitTotals = candidates.filter((candidate) => candidate.receiptScore >= 80)
   const labelledPayments = candidates.filter((candidate) => candidate.receiptScore >= 25)
-  const usableCandidates = candidates.filter((candidate) => candidate.receiptScore > -40)
   const selected = explicitTotals.sort((left, right) => right.receiptScore - left.receiptScore || right.lineIndex - left.lineIndex)[0]
     ?? labelledPayments.sort((left, right) => right.receiptScore - left.receiptScore || right.lineIndex - left.lineIndex)[0]
-    ?? usableCandidates.sort((left, right) => right.lineIndex - left.lineIndex || right.index - left.index)[0]
   if (!selected) return null
 
   const text = lines.join(' ')
@@ -475,7 +487,7 @@ export function parseOcrText(text: string): ImportDraft[] {
     .flatMap((line) => amountCandidates(line).map((candidate) => Math.abs(candidate.value).toFixed(2)))))
   const confirmedAmounts = new Set(variants.flatMap((variant) => variant
     .split(/\r?\n/)
-    .filter((line) => /totale|da\s+pagare|importo\W*pag|pagamento\W*(?:carta|contante|bancomat|pos)/i.test(line))
+    .filter((line) => /totale|da\s+pagare|importo\W*pag|pagamento\W*(?:carta|contante|bancomat|pos)/i.test(normalizeReceiptLabels(line)))
     .flatMap((line) => amountCandidates(line).map((candidate) => Math.abs(candidate.value).toFixed(2)))))
   const safeVariants = parsedVariants.map((rows) => rows.filter((row) => (
     !taxAmounts.has(Number(row.amount).toFixed(2))

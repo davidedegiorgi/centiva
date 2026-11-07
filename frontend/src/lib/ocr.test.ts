@@ -25,6 +25,22 @@ describe('findReceiptBounds', () => {
     expect(bounds).toEqual(expected)
   })
 
+  it('detects a very distant paper receipt without mistaking small bright objects near the edges', () => {
+    const expected = { x: 194, y: 136, width: 12, height: 28 }
+    const pixels = distantReceipt(400, 300, expected)
+
+    for (let y = 10; y < 22; y += 1) {
+      for (let x = 8; x < 20; x += 1) {
+        const offset = (y * 400 + x) * 4
+        pixels[offset] = 245
+        pixels[offset + 1] = 245
+        pixels[offset + 2] = 245
+      }
+    }
+
+    expect(findReceiptBounds(pixels, 400, 300)).toEqual(expected)
+  })
+
   it('does not crop an image without a paper-shaped region', () => {
     const pixels = new Uint8ClampedArray(320 * 240 * 4).fill(35)
     expect(findReceiptBounds(pixels, 320, 240)).toBeNull()

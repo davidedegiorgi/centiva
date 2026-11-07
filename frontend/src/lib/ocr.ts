@@ -5,9 +5,9 @@ import { OCR_VARIANT_SEPARATOR } from '@/lib/import-parser'
 type ProgressListener = (progress: number) => void
 type OcrImage = File | HTMLCanvasElement
 
-const MAX_UPLOAD_SIDE = 2600
-const MIN_RECEIPT_SIDE = 2200
-const RECEIPT_DETECTION_SIDE = 640
+const MAX_UPLOAD_SIDE = 2800
+const MIN_RECEIPT_SIDE = 2400
+const RECEIPT_DETECTION_SIDE = 800
 const FAST_LANGUAGE_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 
 let workerPromise: Promise<Worker> | null = null
@@ -120,20 +120,22 @@ export function findReceiptBounds(pixels: Uint8ClampedArray, width: number, heig
     const areaRatio = boxArea / (width * height)
     const density = count / boxArea
     const aspectRatio = boxWidth / boxHeight
-    if (
-      count < width * height * 0.002
-      || areaRatio < 0.008
-      || areaRatio > 0.9
-      || boxWidth < width * 0.045
-      || boxHeight < height * 0.06
-      || density < 0.28
-      || aspectRatio < 0.14
-      || aspectRatio > 4
-    ) continue
-
     const centerX = (minX + maxX) / 2 / width
     const centerY = (minY + maxY) / 2 / height
     const centerDistance = Math.hypot(centerX - 0.5, centerY - 0.5)
+    const isTinyCandidate = areaRatio < 0.008
+    if (
+      count < width * height * 0.0008
+      || areaRatio < 0.002
+      || areaRatio > 0.9
+      || boxWidth < width * 0.025
+      || boxHeight < height * 0.04
+      || density < 0.28
+      || aspectRatio < 0.14
+      || aspectRatio > 4
+      || (isTinyCandidate && (density < 0.65 || aspectRatio < 0.25 || aspectRatio > 1.4 || centerDistance > 0.4))
+    ) continue
+
     const score = count * density * (1 - Math.min(0.55, centerDistance))
     if (!best || score > best.score) {
       best = { bounds: { x: minX, y: minY, width: boxWidth, height: boxHeight }, score }
@@ -173,10 +175,10 @@ function detectReceiptBounds(bitmap: ImageBitmap): ImageBounds | null {
   }
 }
 
-interface OptimizedImage { image: OcrImage; receiptWasCropped: boolean }
+interface OptimizedImage { image: OcrImage; blockImage: OcrImage; receiptWasCropped: boolean }
 
 async function optimizeImage(image: OcrImage): Promise<OptimizedImage> {
-  if (typeof createImageBitmap !== 'function') return { image, receiptWasCropped: false }
+  if (typeof createImageBitmap !== 'function') return { image, blockImage: image, receiptWasCropped: false }
 
   const bitmap = await createImageBitmap(image)
   const detectedBounds = detectReceiptBounds(bitmap)
@@ -194,15 +196,28 @@ async function optimizeImage(image: OcrImage): Promise<OptimizedImage> {
   const context = canvas.getContext('2d', { alpha: false })
   if (!context) {
     bitmap.close()
-    return { image, receiptWasCropped: false }
+    return { image, blockImage: image, receiptWasCropped: false }
   }
+
+  const blockCanvas = document.createElement('canvas')
+  blockCanvas.width = canvas.width
+  blockCanvas.height = canvas.height
+  const blockContext = blockCanvas.getContext('2d', { alpha: false })
 
   context.imageSmoothingEnabled = scale <= 1
   context.imageSmoothingQuality = 'high'
   context.filter = 'grayscale(1) contrast(1.45)'
   context.drawImage(bitmap, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, canvas.width, canvas.height)
+
+  if (blockContext) {
+    blockContext.imageSmoothingEnabled = scale <= 1
+    blockContext.imageSmoothingQuality = 'high'
+    blockContext.filter = 'grayscale(1) contrast(1.9) brightness(1.08)'
+    blockContext.drawImage(bitmap, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, blockCanvas.width, blockCanvas.height)
+  }
+
   bitmap.close()
-  return { image: canvas, receiptWasCropped: detectedBounds !== null }
+  return { image: canvas, blockImage: blockContext ? blockCanvas : canvas, receiptWasCropped: detectedBounds !== null }
 }
 
 /** Avvia in anticipo il motore OCR e riusa lo stesso worker tra scansioni. */
@@ -233,7 +248,7 @@ export async function recognizeImage(imageSource: OcrImage, onProgress: Progress
     lastReportedProgress = 70
     onProgress(70)
     await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
-    const blockResult = await worker.recognize(optimized.image, {}, { text: true })
+    const blockResult = await worker.recognize(optimized.blockImage, {}, { text: true })
     onProgress(100)
 
     return `${sparseText}${OCR_VARIANT_SEPARATOR}${blockResult.data.text}`
