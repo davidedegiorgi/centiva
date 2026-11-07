@@ -57,7 +57,9 @@ class ProfileController extends Controller
                     ->delete();
             }
 
-            if (! $user->delete() || DB::table('users')->where('id', $userId)->exists()) {
+            $deletedRows = DB::table('users')->where('id', $userId)->delete();
+
+            if ($deletedRows !== 1 || DB::table('users')->where('id', $userId)->exists()) {
                 throw new \RuntimeException('Eliminazione account non completata.');
             }
         });

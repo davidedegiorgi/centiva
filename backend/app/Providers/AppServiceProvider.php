@@ -20,7 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Account emails are a required production feature. Do not silently
+        // accept MAIL_MAILER=log on Render, because registration would appear
+        // successful while no verification code is actually delivered.
+        if ($this->app->environment('production')) {
+            config()->set('mail.default', 'smtp');
+        }
     }
 
     /**
@@ -60,8 +65,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($email.'|'.$request->ip());
         });
 
-        RateLimiter::for('register', fn (Request $request): Limit => Limit::perMinute(3)
-            ->by($request->ip()));
+        RateLimiter::for('register', function (Request $request): Limit {
+            $email = Str::transliterate(Str::lower($request->string('email')->toString()));
+
+            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+        });
 
         RateLimiter::for('verify-email', function (Request $request): Limit {
             $email = Str::transliterate(Str::lower($request->string('email')->toString()));
