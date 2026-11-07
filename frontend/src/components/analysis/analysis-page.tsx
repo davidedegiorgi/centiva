@@ -77,7 +77,6 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
       <header className="mb-7 border-b border-white/10 pb-6">
         <p className="text-sm font-medium text-emerald-300">Centiva Insights</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Analisi delle spese</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Solo osservazioni supportate dalle transazioni registrate.</p>
       </header>
 
       {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>Analisi non disponibile</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}

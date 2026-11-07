@@ -36,7 +36,6 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
   const [success, setSuccess] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
-  const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [deleteError, setDeleteError] = useState<ApiError | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -65,7 +64,6 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
     if (isDeleting) return
 
     setShowDeleteConfirmation(false)
-    setDeleteConfirmation('')
     setDeleteError(null)
   }
 
@@ -75,7 +73,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
     setIsDeleting(true)
 
     try {
-      await authApi.deleteAccount({ confirmation: deleteConfirmation })
+      await authApi.deleteAccount({ confirmation: 'ELIMINA' })
       onAccountDeleted()
     } catch (caughtError) {
       setDeleteError(
@@ -191,10 +189,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
             <form className="flex flex-col gap-4" onSubmit={handleDeleteAccount}>
               <Alert variant="destructive">
                 <TriangleAlert aria-hidden="true" />
-                <AlertTitle>Azione irreversibile</AlertTitle>
-                <AlertDescription>
-                  Verranno eliminati profilo, transazioni, obiettivi e accantonamenti. Non sarà possibile recuperarli.
-                </AlertDescription>
+                <AlertTitle>Sei sicuro di eliminare?</AlertTitle>
               </Alert>
 
               {deleteError && Object.keys(deleteError.errors).length === 0 && (
@@ -204,36 +199,18 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
                 </Alert>
               )}
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="delete-confirmation">
-                  Scrivi <span className="font-mono font-semibold text-red-300">ELIMINA</span> per confermare
-                </Label>
-                <Input
-                  id="delete-confirmation"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={deleteConfirmation}
-                  onChange={(event) => setDeleteConfirmation(event.target.value)}
-                  aria-invalid={Boolean(deleteError?.errors.confirmation)}
-                  className="border-red-500/25 focus-visible:border-red-400 focus-visible:ring-red-400/30"
-                />
-                {deleteError?.errors.confirmation?.[0] && (
-                  <p className="text-sm text-destructive">{deleteError.errors.confirmation[0]}</p>
-                )}
-              </div>
-
               <div className="flex flex-wrap gap-3">
                 <Button
                   className="h-11 bg-red-600 px-5 text-white hover:bg-red-500"
                   type="submit"
-                  disabled={isDeleting || deleteConfirmation !== 'ELIMINA'}
+                  disabled={isDeleting}
                 >
                   {isDeleting ? (
                     <LoaderCircle className="animate-spin" aria-hidden="true" />
                   ) : (
                     <Trash2 aria-hidden="true" />
                   )}
-                  Elimina definitivamente
+                  Sì
                 </Button>
                 <Button
                   className="h-11"
@@ -243,7 +220,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
                   onClick={closeDeleteConfirmation}
                 >
                   <X aria-hidden="true" />
-                  Annulla
+                  No
                 </Button>
               </div>
             </form>

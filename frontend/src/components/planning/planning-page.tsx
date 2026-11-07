@@ -116,7 +116,7 @@ export function PlanningPage() {
   if (loading) return <main className="grid min-h-[60vh] place-items-center"><LoaderCircle className="size-6 animate-spin text-emerald-300" aria-label="Calcolo in corso" /></main>
 
   return <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8">
-    <div className="mb-7"><p className="text-sm font-medium text-emerald-300">Pianificazione</p><h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Guarda avanti</h1><p className="mt-2 text-muted-foreground">FutureBalance e budget per categoria lavorano sui tuoi movimenti reali.</p></div>
+    <div className="mb-7"><p className="text-sm font-medium text-emerald-300">Pianificazione</p><h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Guarda avanti</h1></div>
     {error && <Alert variant="destructive"><Gauge /><AlertTitle>Calcolo non disponibile</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {data && <div>
       <Card className="border-0 bg-[#0b0d0c] text-white shadow-[inset_1px_1px_rgba(255,255,255,0.08),inset_-70px_-50px_120px_rgba(0,0,0,0.7),0_40px_100px_-58px_rgba(0,0,0,1)]">
@@ -132,7 +132,7 @@ export function PlanningPage() {
 
     <Card className="mt-6 border-white/10 bg-card">
       <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div><CardTitle className="flex items-center gap-2"><PiggyBank className="size-5 text-emerald-300" /> Budget per categoria</CardTitle><CardDescription className="mt-1">Imposta quanto vuoi spendere; Centiva confronta il limite con le uscite registrate.</CardDescription></div>
+        <CardTitle className="flex items-center gap-2"><PiggyBank className="size-5 text-emerald-300" /> Budget per categoria</CardTitle>
         <label className="grid gap-1.5 text-sm"><span className="text-muted-foreground">Mese</span><Input className="w-44" type="month" value={month} onChange={(event) => { setBudgetLoading(true); setMonth(event.target.value) }} /></label>
       </CardHeader>
       <CardContent className="space-y-6">

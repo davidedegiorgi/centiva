@@ -90,7 +90,6 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
         <div>
           <p className="text-sm font-medium text-emerald-300">Dashboard</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-5xl">Riepilogo mensile</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Entrate e uscite che hai registrato nel mese corrente.</p>
         </div>
         <select className="h-10 w-28 rounded-lg border border-white/15 bg-[#0b0d0c] px-3 font-data text-xs text-foreground outline-none focus:border-emerald-400" value={currency} onChange={(event) => changeCurrency(event.target.value)} aria-label="Valuta dashboard">
           <option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="CHF">CHF</option>
@@ -100,7 +99,7 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
       {error && <Alert variant="destructive"><AlertTitle>Aggiornamento non riuscito</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>}
 
       <section className="grid gap-3 md:grid-cols-3" aria-label="Riepilogo del mese">
-        <Card className="border-emerald-400/20 bg-[#0b0d0c] shadow-[inset_0_1px_rgba(255,255,255,0.08),0_26px_70px_-48px_rgba(16,185,129,0.7)]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-4 sm:p-6"><div><p className="text-sm text-emerald-200">Risultato del mese</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Entrate − uscite registrate. Non è il saldo del conto.</p></div><LiquidNumber className="text-2xl font-semibold text-emerald-200 sm:text-4xl" value={dashboard.summary.net_savings} currency={dashboard.currency} /></CardContent></Card>
+        <Card className="border-emerald-400/20 bg-[#0b0d0c] shadow-[inset_0_1px_rgba(255,255,255,0.08),0_26px_70px_-48px_rgba(16,185,129,0.7)]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-4 sm:p-6"><p className="text-sm text-emerald-200">Risultato del mese</p><LiquidNumber className="text-2xl font-semibold text-emerald-200 sm:text-4xl" value={dashboard.summary.net_savings} currency={dashboard.currency} /></CardContent></Card>
         <Card className="border-white/10 bg-[#0b0d0c]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-5 sm:p-6"><div className="flex items-center gap-2 text-sm text-emerald-200"><span className="grid size-8 place-items-center rounded-lg bg-emerald-500/10"><TrendingUp className="size-4" aria-hidden="true" /></span>Entrate del mese</div><LiquidNumber className="text-2xl font-semibold sm:text-4xl" value={dashboard.summary.income} currency={dashboard.currency} /></CardContent></Card>
         <Card className="border-white/10 bg-[#0b0d0c]"><CardContent className="flex min-h-32 flex-col justify-between gap-3 p-4 sm:min-h-40 sm:gap-5 sm:p-6"><div className="flex items-center gap-2 text-sm text-zinc-300"><span className="grid size-8 place-items-center rounded-lg bg-white/5"><TrendingDown className="size-4" aria-hidden="true" /></span>Uscite del mese</div><LiquidNumber className="text-2xl font-semibold sm:text-4xl" value={dashboard.summary.expenses} currency={dashboard.currency} /></CardContent></Card>
       </section>
