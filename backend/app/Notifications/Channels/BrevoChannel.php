@@ -54,6 +54,12 @@ class BrevoChannel
 
             $response->throw();
         }
+
+        Log::info('Brevo ha accettato l’email transazionale.', [
+            'notification' => $notification::class,
+            'status' => $response->status(),
+            'message_id' => $response->json('messageId'),
+        ]);
     }
 
     /** @return array<int, array{email: string, name?: string}> */

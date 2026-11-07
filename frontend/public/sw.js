@@ -1,4 +1,4 @@
-const CACHE_NAME = 'centiva-shell-v2'
+const CACHE_NAME = 'centiva-shell-v3'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/favicon.png', '/apple-touch-icon.png', '/pwa-192.png', '/pwa-512.png']
 
 self.addEventListener('install', (event) => {
@@ -20,7 +20,14 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
 
   if (request.method !== 'GET' || url.origin !== self.location.origin) return
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/sanctum/')) return
+  // API, Sanctum and OAuth must always be handled by the network. Intercepting
+  // /backend/auth/google/redirect as an app navigation corrupts the PWA shell
+  // and can leave the user on the Laravel backend page.
+  if (
+    url.pathname.startsWith('/backend/')
+    || url.pathname.startsWith('/api/')
+    || url.pathname.startsWith('/sanctum/')
+  ) return
   if (request.headers.get('accept')?.includes('application/json')) return
 
   if (request.mode === 'navigate') {
