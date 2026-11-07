@@ -7,7 +7,7 @@ const now = new Date(2026, 10, 6, 12)
 describe('parseVoiceTransaction', () => {
   it('parses the minimal phrase amount followed by expense', () => {
     expect(parseVoiceTransaction('50 spesa', now)).toMatchObject({
-      type: 'expense', amount: 50, currency: 'EUR', occurred_on: '2026-11-06', category: 'Altro',
+      type: 'expense', amount: 50, currency: 'EUR', occurred_on: '2026-11-06', category: 'Spesa',
     })
   })
 

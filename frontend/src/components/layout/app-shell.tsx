@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CalendarClock, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle, LogOut, Plus, Target, UserRound, type LucideIcon } from 'lucide-react'
+import { CalendarClock, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle, LogOut, Plus, Target, type LucideIcon } from 'lucide-react'
 
 import { BrandLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,6 @@ const navigationItems: Array<{ view: AppView; label: string; icon: LucideIcon }>
   { view: 'analysis', label: 'Insights', icon: Lightbulb },
   { view: 'planning', label: 'Pianifica', icon: CalendarClock },
   { view: 'goals', label: 'INcentiva', icon: Target },
-  { view: 'profile', label: 'Profilo', icon: UserRound },
 ]
 
 interface AppShellProps {
@@ -37,6 +36,9 @@ export function AppShell({
   onViewChange,
   onLogout,
 }: AppShellProps) {
+  const userInitial = user.name.trim().charAt(0).toLocaleUpperCase('it-IT')
+    || user.email.trim().charAt(0).toLocaleUpperCase('it-IT')
+
   return (
     <div className={`relative bg-background ${immersive ? 'h-[100svh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'}`}>
       <div className="pointer-events-none fixed -left-40 top-20 size-96 rounded-full bg-emerald-500/[0.07] blur-3xl" />
@@ -71,6 +73,16 @@ export function AppShell({
               )}
               <span className="hidden sm:inline">Esci</span>
             </Button>
+            <button
+              className={`grid size-9 shrink-0 place-items-center rounded-full border font-data text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${activeView === 'profile' ? 'border-emerald-300 bg-emerald-400 text-emerald-950' : 'border-white/15 bg-white/[0.07] text-emerald-200 hover:border-emerald-300/50 hover:bg-emerald-400/10'}`}
+              type="button"
+              onClick={() => onViewChange('profile')}
+              aria-label="Apri il profilo"
+              aria-current={activeView === 'profile' ? 'page' : undefined}
+              title="Profilo"
+            >
+              {userInitial}
+            </button>
           </div>
         </div>
       </header>}

@@ -208,23 +208,11 @@ export const transactionApi = {
   },
 
   async removeMany(ids: string[]): Promise<{ deleted: number }> {
-    try {
-      return await stateChangingRequest<{ deleted: number }>(
-        '/api/v1/transactions/bulk',
-        'DELETE',
-        { ids },
-      )
-    } catch (error) {
-      if (!(error instanceof ApiError) || ![404, 405].includes(error.status)) {
-        throw error
-      }
+    // Le rotte singole sono disponibili anche sulle versioni precedenti di Render
+    // e limitano l'operazione esclusivamente agli ID selezionati dall'utente.
+    await Promise.all(ids.map((id) => transactionApi.remove(id)))
 
-      // Render può essere ancora sulla versione precedente, priva della rotta bulk.
-      // In quel caso usiamo le eliminazioni singole già disponibili.
-      await Promise.all(ids.map((id) => transactionApi.remove(id)))
-
-      return { deleted: ids.length }
-    }
+    return { deleted: ids.length }
   },
 
   async bulk(payload: BulkImportPayload): Promise<{ data: TransactionResponse['data'][] }> {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, LoaderCircle, Mic, MicOff, Save, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -116,11 +117,12 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
         {placement === 'header' && <span className="hidden lg:inline">Registra con la voce</span>}
       </Button>
 
-      {message && <div className="fixed left-1/2 top-20 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-2xl border border-white/15 bg-[#090c0a]/95 px-4 py-3 text-center text-sm text-zinc-200 shadow-2xl backdrop-blur-xl" role="status"><span className="inline-flex items-center gap-2">{message.startsWith('Movimento') && <Check className="size-4 text-emerald-300" />}{message}</span><button className="ml-3 text-emerald-300" type="button" onClick={() => setMessage(null)}>Chiudi</button></div>}
+      {createPortal(<>
+      {message && <div className="fixed left-1/2 top-[calc(1rem+env(safe-area-inset-top))] z-[110] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-2xl border border-white/15 bg-[#090c0a]/95 px-4 py-3 text-center text-sm text-zinc-200 shadow-2xl backdrop-blur-xl" role="status"><span className="inline-flex items-center gap-2">{message.startsWith('Movimento') && <Check className="size-4 text-emerald-300" />}{message}</span><button className="ml-3 text-emerald-300" type="button" onClick={() => setMessage(null)}>Chiudi</button></div>}
 
       {draft && (
-        <div className="fixed inset-0 z-[80] grid place-items-end bg-black/75 p-3 backdrop-blur-sm sm:place-items-center" role="dialog" aria-modal="true" aria-labelledby="voice-transaction-title">
-          <div className="w-full max-w-xl rounded-[1.75rem] border border-white/15 bg-[#0b100d] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.75)] sm:p-6">
+        <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/75 p-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="voice-transaction-title">
+          <div className="max-h-[calc(100svh-8rem)] w-full max-w-xl overflow-y-auto rounded-[1.75rem] border border-white/15 bg-[#0b100d] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.75)] sm:max-h-[calc(100svh-3rem)] sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Movimento vocale</p><h2 id="voice-transaction-title" className="mt-1 text-xl font-semibold">Conferma i dati riconosciuti</h2><p className="mt-2 text-sm text-muted-foreground">“{draft.transcript}”</p></div><Button variant="ghost" size="icon" type="button" onClick={() => setDraft(null)} aria-label="Chiudi"><X /></Button></div>
             <form className="grid gap-4 sm:grid-cols-2" onSubmit={saveTransaction}>
               {error && <p className="rounded-xl border border-rose-400/25 bg-rose-400/10 p-3 text-sm text-rose-100 sm:col-span-2">{error}</p>}
@@ -133,6 +135,7 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
           </div>
         </div>
       )}
+      </>, document.body)}
     </>
   )
 }

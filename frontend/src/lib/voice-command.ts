@@ -63,7 +63,9 @@ function parseCategory(transcript: string, type: TransactionType): string {
     const exact = IMPORT_CATEGORIES.find((category) => category.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT') === normalized)
     if (exact) return exact
   }
-  return suggestCategory(transcript, type)
+  const suggested = suggestCategory(transcript, type)
+  if (type === 'expense' && suggested === 'Altro' && /\bspesa\b/i.test(transcript)) return 'Spesa'
+  return suggested
 }
 
 export function parseVoiceTransaction(transcript: string, now = new Date()): VoiceTransactionDraft | null {

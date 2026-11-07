@@ -1,10 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   CheckCircle2,
-  Download,
   LoaderCircle,
   Save,
-  Smartphone,
   Trash2,
   TriangleAlert,
   UserRound,
@@ -23,12 +21,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError, authApi } from '@/lib/api'
-import {
-  canInstallApp,
-  isRunningStandalone,
-  requestAppInstallation,
-  subscribeToInstallState,
-} from '@/lib/pwa'
 import type { User } from '@/types/auth'
 
 interface ProfilePageProps {
@@ -43,27 +35,10 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
   const [error, setError] = useState<ApiError | null>(null)
   const [success, setSuccess] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isInstalled, setIsInstalled] = useState(isRunningStandalone)
-  const [canInstall, setCanInstall] = useState(canInstallApp)
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [deleteError, setDeleteError] = useState<ApiError | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent)
-
-  useEffect(() => subscribeToInstallState(() => {
-    setIsInstalled(isRunningStandalone())
-    setCanInstall(canInstallApp())
-  }), [])
-
-  async function handleInstall(): Promise<void> {
-    const wasAccepted = await requestAppInstallation()
-
-    if (wasAccepted) {
-      setIsInstalled(true)
-      setCanInstall(false)
-    }
-  }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -118,7 +93,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
       <header className="border-b border-white/10 pb-6">
         <p className="text-sm font-medium text-emerald-300">Profilo</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Account</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">Gestisci dati personali, installazione e cancellazione dell’account.</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Gestisci i dati personali e le impostazioni dell’account.</p>
       </header>
 
       <Card className="border-white/10 bg-card shadow-[0_24px_70px_-42px_rgba(15,45,34,0.32)]">
@@ -191,53 +166,12 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
         </CardContent>
       </Card>
 
-      <Card className="border-white/10 bg-[#0b0d0c]">
-        <CardHeader>
-          <div className="mb-2 grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-300">
-            <Smartphone className="size-5" aria-hidden="true" />
-          </div>
-          <CardTitle>Installa Centiva</CardTitle>
-          <CardDescription>
-            Aprila dalla schermata Home o dal desktop come una vera applicazione.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-start gap-4">
-          {isInstalled ? (
-            <Alert className="border-emerald-300/25 bg-emerald-500/10 text-emerald-100">
-              <CheckCircle2 aria-hidden="true" />
-              <AlertTitle>Centiva è installata</AlertTitle>
-              <AlertDescription>Puoi avviarla direttamente dall’icona sul dispositivo.</AlertDescription>
-            </Alert>
-          ) : canInstall ? (
-            <>
-              <Button
-                className="h-11 bg-emerald-400 px-5 text-emerald-950 hover:bg-emerald-300"
-                type="button"
-                onClick={() => void handleInstall()}
-              >
-                <Download aria-hidden="true" />
-                Installa l’app
-              </Button>
-              <p className="text-sm leading-6 text-muted-foreground">
-                L’installazione non occupa lo spazio di un’app tradizionale e mantiene gli aggiornamenti automatici.
-              </p>
-            </>
-          ) : (
-            <p className="text-sm leading-6 text-muted-foreground">
-              {isIos
-                ? 'Su iPhone o iPad apri Centiva in Safari, tocca Condividi e scegli “Aggiungi alla schermata Home”.'
-                : 'Apri il menu del browser e scegli “Installa app” o “Aggiungi alla schermata Home”.'}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       <Card className="border-red-500/20 bg-[#0b0d0c]">
         <CardHeader>
           <div className="mb-2 grid size-10 place-items-center rounded-xl bg-red-500/10 text-red-300">
             <TriangleAlert className="size-5" aria-hidden="true" />
           </div>
-          <CardTitle>Zona pericolosa</CardTitle>
+          <CardTitle>Gestione account</CardTitle>
           <CardDescription>
             Elimina definitivamente il tuo account e tutti i dati associati.
           </CardDescription>

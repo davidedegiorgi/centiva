@@ -199,6 +199,8 @@ export function TransactionsPage() {
           ? caughtError
           : new ApiError('Impossibile eliminare le transazioni selezionate.', 500),
       )
+      setIsLoading(true)
+      setRefreshKey((value) => value + 1)
     } finally {
       setIsDeleting(false)
     }
@@ -225,16 +227,6 @@ export function TransactionsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            className="h-10 border-rose-300/25 text-rose-200 hover:bg-rose-500/10 hover:text-rose-100"
-            variant="outline"
-            type="button"
-            disabled={transactions.length === 0 && !isSelecting}
-            onClick={() => isSelecting ? stopSelecting() : setIsSelecting(true)}
-          >
-            <Trash2 aria-hidden="true" />
-            {isSelecting ? 'Annulla' : 'Elimina'}
-          </Button>
           <Button
             className="h-10 bg-emerald-600 px-4 text-white hover:bg-emerald-700"
             type="button"
@@ -329,6 +321,30 @@ export function TransactionsPage() {
         </CardContent>
       </Card>
 
+      <div className="flex min-h-10 flex-wrap items-center gap-2">
+        <Button
+          className="h-10 border-rose-300/25 text-rose-200 hover:bg-rose-500/10 hover:text-rose-100"
+          variant="outline"
+          type="button"
+          disabled={transactions.length === 0 && !isSelecting}
+          onClick={() => isSelecting ? stopSelecting() : setIsSelecting(true)}
+        >
+          <Trash2 aria-hidden="true" />
+          {isSelecting ? 'Annulla selezione' : 'Elimina movimenti'}
+        </Button>
+        {isSelecting && transactions.length > 0 && (
+          <>
+            <Button variant="ghost" size="sm" type="button" disabled={isDeleting} onClick={toggleAllVisible}>
+              {transactions.every((transaction) => selectedIds.has(transaction.id)) ? 'Deseleziona tutte' : 'Seleziona tutte'}
+            </Button>
+            <Button className="bg-rose-600 text-white hover:bg-rose-500" size="sm" type="button" disabled={selectedIds.size === 0 || isDeleting} onClick={() => void handleBulkDelete()}>
+              {isDeleting ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+              Elimina {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </Button>
+          </>
+        )}
+      </div>
+
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Operazione non completata</AlertTitle>
@@ -344,17 +360,6 @@ export function TransactionsPage() {
               : (meta.total === 1 ? '1 transazione' : `${meta.total} transazioni`)}
           </p>
           <div className="flex items-center gap-2">
-            {isSelecting && transactions.length > 0 && (
-              <>
-                <Button variant="ghost" size="sm" type="button" disabled={isDeleting} onClick={toggleAllVisible}>
-                  {transactions.every((transaction) => selectedIds.has(transaction.id)) ? 'Deseleziona tutte' : 'Seleziona tutte'}
-                </Button>
-                <Button className="bg-rose-600 text-white hover:bg-rose-500" size="sm" type="button" disabled={selectedIds.size === 0 || isDeleting} onClick={() => void handleBulkDelete()}>
-                  {isDeleting ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
-                  Elimina {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                </Button>
-              </>
-            )}
             {isLoading && <LoaderCircle className="size-4 animate-spin text-emerald-600" aria-label="Caricamento" />}
           </div>
         </div>
