@@ -27,6 +27,11 @@ const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000'
 ).replace(/\/$/, '')
 
+const oauthBackendUrl = (
+  import.meta.env.VITE_OAUTH_BACKEND_URL
+    ?? (backendUrl === '/backend' ? 'https://centiva-api.onrender.com' : backendUrl)
+).replace(/\/$/, '')
+
 type ValidationErrors = Record<string, string[]>
 
 export class ApiError extends Error {
@@ -117,7 +122,7 @@ async function stateChangingRequest<T>(
 
 export const authApi = {
   googleRedirectUrl(): string {
-    return `${backendUrl}/auth/google/redirect`
+    return `${oauthBackendUrl}/auth/google/redirect`
   },
 
   async profile(): Promise<UserResponse> {

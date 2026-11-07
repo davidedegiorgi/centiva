@@ -129,4 +129,14 @@ class GoogleAuthControllerTest extends TestCase
         $this->get('/?code=oauth-code&state=oauth-state')
             ->assertRedirect('http://localhost:5173?auth=google');
     }
+
+    public function test_production_never_redirects_google_login_to_the_laravel_backend_home(): void
+    {
+        $this->app->detectEnvironment(fn (): string => 'production');
+        config()->set('app.frontend_url', 'https://centiva-api.onrender.com');
+        config()->set('services.google.client_id', null);
+
+        $this->get('/auth/google/redirect')
+            ->assertRedirect('https://centiva.vercel.app?auth_error=Accesso+con+Google+non+ancora+configurato.');
+    }
 }

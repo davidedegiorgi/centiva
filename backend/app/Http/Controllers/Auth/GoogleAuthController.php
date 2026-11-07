@@ -122,6 +122,13 @@ class GoogleAuthController extends Controller
 
     private function frontendUrl(): string
     {
-        return rtrim((string) config('app.frontend_url', 'http://localhost:5173'), '/');
+        $frontendUrl = rtrim((string) config('app.frontend_url', 'http://localhost:5173'), '/');
+        $frontendHost = parse_url($frontendUrl, PHP_URL_HOST);
+
+        if (app()->isProduction() && (! is_string($frontendHost) || str_ends_with($frontendHost, '.onrender.com'))) {
+            return 'https://centiva.vercel.app';
+        }
+
+        return $frontendUrl;
     }
 }
