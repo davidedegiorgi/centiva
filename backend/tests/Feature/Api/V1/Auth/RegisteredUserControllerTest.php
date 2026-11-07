@@ -104,6 +104,28 @@ class RegisteredUserControllerTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
+    public function test_unverified_email_can_restart_registration_and_receive_a_new_code(): void
+    {
+        Notification::fake();
+        $user = User::factory()->unverified()->create([
+            'name' => 'Nome precedente',
+            'email' => 'pending@example.com',
+        ]);
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Nome aggiornato',
+            'email' => 'pending@example.com',
+            'password' => 'NewSecurePass1!',
+            'password_confirmation' => 'NewSecurePass1!',
+        ])->assertCreated()
+            ->assertJsonPath('verification_required', true);
+
+        $this->assertDatabaseCount('users', 1);
+        $this->assertSame('Nome aggiornato', $user->refresh()->name);
+        $this->assertDatabaseHas('email_verification_codes', ['user_id' => $user->id]);
+        Notification::assertSentTo($user, VerifyEmailCode::class);
+    }
+
     public function test_unexpected_payload_key_cannot_verify_email(): void
     {
         Notification::fake();

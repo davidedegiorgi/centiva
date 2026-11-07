@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\EmailVerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class RegisteredUserController extends Controller
@@ -17,16 +18,28 @@ class RegisteredUserController extends Controller
         EmailVerificationService $verificationService,
     ): JsonResponse {
         $user = null;
+        $email = $request->string('email')->toString();
+
+        if (User::query()->where('email', $email)->whereNotNull('email_verified_at')->exists()) {
+            throw ValidationException::withMessages([
+                'email' => 'Esiste già un account con questo indirizzo email.',
+            ]);
+        }
 
         try {
             // Never keep a database transaction open while waiting for an
             // external mail server. Persist first, then deliver the code.
-            $user = DB::transaction(function () use ($request): User {
-                return User::query()->create($request->safe()->only([
-                    'name',
-                    'email',
-                    'password',
-                ]));
+            $user = DB::transaction(function () use ($request, $email): User {
+                $user = User::query()->where('email', $email)->lockForUpdate()->first();
+                $attributes = $request->safe()->only(['name', 'email', 'password']);
+
+                if ($user === null) {
+                    return User::query()->create($attributes);
+                }
+
+                $user->update($attributes);
+
+                return $user;
             });
 
             $verificationService->issue($user);
