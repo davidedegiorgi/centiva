@@ -8,9 +8,12 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\AccountDeleted;
 use App\Notifications\Channels\BrevoChannel;
+use App\Services\AccountEmailService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 class ProfileControllerTest extends TestCase
@@ -148,5 +151,25 @@ class ProfileControllerTest extends TestCase
             fn (AccountDeleted $notification, array $channels, object $notifiable): bool => $channels === [BrevoChannel::class]
                 && $notifiable->routes['mail'] === [$user->email => $user->name],
         );
+    }
+
+    public function test_account_is_not_deleted_when_confirmation_email_fails(): void
+    {
+        $user = User::factory()->create(['email' => 'keep@example.com']);
+
+        $this->mock(AccountEmailService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('sendDeletionConfirmation')
+                ->once()
+                ->andThrow(new RuntimeException('Brevo non disponibile'));
+        });
+
+        $this->actingAs($user)
+            ->withSession([])
+            ->deleteJson('/api/v1/profile', ['confirmation' => 'ELIMINA'])
+            ->assertServiceUnavailable()
+            ->assertJsonPath('code', 'account_deletion_email_failed');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
     }
 }

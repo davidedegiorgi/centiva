@@ -13,6 +13,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ProfileController extends Controller
 {
@@ -32,11 +33,24 @@ class ProfileController extends Controller
     public function destroy(
         DeleteProfileRequest $request,
         AccountEmailService $accountEmailService,
-    ): Response {
+    ): Response|JsonResponse {
         $user = $request->user();
         $userId = $user->getAuthIdentifier();
         $email = $user->email;
         $name = $user->name;
+
+        try {
+            // L'account viene eliminato solo dopo che Brevo ha accettato
+            // la conferma: nessun errore email viene più ignorato.
+            $accountEmailService->sendDeletionConfirmation($email, $name);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Non siamo riusciti a inviare la conferma. L’account non è stato eliminato: riprova tra poco.',
+                'code' => 'account_deletion_email_failed',
+            ], 503);
+        }
 
         // Logout first: the session guard rotates and persists the remember
         // token during logout, which would otherwise recreate stale state
@@ -64,8 +78,6 @@ class ProfileController extends Controller
                 throw new \RuntimeException('Eliminazione account non completata.');
             }
         });
-
-        $accountEmailService->sendDeletionConfirmation($email, $name);
 
         Log::info('Account Centiva eliminato e notifica di conferma elaborata.', [
             'email_hash' => hash('sha256', strtolower($email)),

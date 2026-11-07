@@ -12,6 +12,7 @@ use App\Services\EmailVerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class EmailVerificationController extends Controller
 {
@@ -36,7 +37,13 @@ class EmailVerificationController extends Controller
 
         Auth::login($user, true);
         $request->session()->regenerate();
-        $accountEmailService->sendWelcome($user);
+        try {
+            $accountEmailService->sendWelcome($user);
+        } catch (Throwable $exception) {
+            // La verifica resta valida. Il login successivo ritenterà il
+            // benvenuto finché Brevo non conferma l'accettazione.
+            report($exception);
+        }
 
         return (new UserResource($user->refresh()))->response();
     }

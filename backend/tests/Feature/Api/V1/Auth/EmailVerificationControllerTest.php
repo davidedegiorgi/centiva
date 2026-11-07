@@ -34,6 +34,7 @@ class EmailVerificationControllerTest extends TestCase
 
         $this->assertAuthenticatedAs($user);
         $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertNotNull($user->refresh()->welcome_email_sent_at);
         $this->assertDatabaseMissing('email_verification_codes', ['user_id' => $user->id]);
         Notification::assertSentTo($user, WelcomeToCentiva::class);
     }

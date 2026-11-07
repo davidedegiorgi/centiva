@@ -3,7 +3,9 @@
 namespace Tests\Feature\Api\V1\Auth;
 
 use App\Models\User;
+use App\Notifications\WelcomeToCentiva;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AuthenticatedSessionControllerTest extends TestCase
@@ -54,6 +56,41 @@ class AuthenticatedSessionControllerTest extends TestCase
             ->assertJsonPath('errors.email.0', 'Le credenziali non sono corrette.');
 
         $this->assertGuest();
+    }
+
+    public function test_login_retries_welcome_until_brevo_accepts_it(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create([
+            'email' => 'welcome@example.com',
+            'password' => 'SecurePass1!',
+            'welcome_email_sent_at' => null,
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'welcome@example.com',
+            'password' => 'SecurePass1!',
+        ])->assertOk();
+
+        Notification::assertSentTo($user, WelcomeToCentiva::class);
+        $this->assertNotNull($user->refresh()->welcome_email_sent_at);
+    }
+
+    public function test_login_does_not_send_a_duplicate_welcome(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create([
+            'email' => 'welcomed@example.com',
+            'password' => 'SecurePass1!',
+            'welcome_email_sent_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'welcomed@example.com',
+            'password' => 'SecurePass1!',
+        ])->assertOk();
+
+        Notification::assertNothingSent();
     }
 
     public function test_unverified_user_must_confirm_email_before_login(): void

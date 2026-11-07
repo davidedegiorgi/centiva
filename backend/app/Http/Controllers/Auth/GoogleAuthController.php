@@ -101,8 +101,14 @@ class GoogleAuthController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
-        if ($isNewUser || ! $wasVerified) {
-            $accountEmailService->sendWelcome($user);
+        if ($isNewUser || ! $wasVerified || $user->welcome_email_sent_at === null) {
+            try {
+                $accountEmailService->sendWelcome($user);
+            } catch (Throwable $exception) {
+                // Non bloccare OAuth: al prossimo accesso Google verrà
+                // effettuato automaticamente un nuovo tentativo.
+                report($exception);
+            }
         }
 
         return redirect()->away($this->frontendUrl().'?auth=google');
