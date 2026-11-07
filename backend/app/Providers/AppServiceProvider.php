@@ -20,12 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Account emails are a required production feature. Do not silently
-        // accept MAIL_MAILER=log on Render, because registration would appear
-        // successful while no verification code is actually delivered.
-        if ($this->app->environment('production')) {
-            config()->set('mail.default', 'smtp');
-        }
+        //
     }
 
     /**
