@@ -36,7 +36,7 @@ class EmailVerificationController extends Controller
 
         Auth::login($user, true);
         $request->session()->regenerate();
-        $accountEmailService->sendWelcome($user);
+        $accountEmailService->sendWelcomeAfterResponse($user);
 
         return (new UserResource($user->refresh()))->response();
     }

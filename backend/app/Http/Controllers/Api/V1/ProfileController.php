@@ -57,7 +57,7 @@ class ProfileController extends Controller
             $user->delete();
         });
 
-        $accountEmailService->sendDeletionConfirmation($email, $name);
+        $accountEmailService->sendDeletionConfirmationAfterResponse($email, $name);
 
         return response()->noContent();
     }

@@ -101,6 +101,8 @@ class RegisteredUserControllerTest extends TestCase
 
     public function test_unexpected_payload_key_cannot_verify_email(): void
     {
+        Notification::fake();
+
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Giulia Bianchi',
             'email' => 'giulia@example.com',

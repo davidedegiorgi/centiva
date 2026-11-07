@@ -7,6 +7,7 @@ use App\Models\SavingsGoal;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\AccountDeleted;
+use App\Notifications\Channels\BrevoChannel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -144,7 +145,7 @@ class ProfileControllerTest extends TestCase
 
         Notification::assertSentOnDemand(
             AccountDeleted::class,
-            fn (AccountDeleted $notification, array $channels, object $notifiable): bool => $channels === ['mail']
+            fn (AccountDeleted $notification, array $channels, object $notifiable): bool => $channels === [BrevoChannel::class]
                 && $notifiable->routes['mail'] === [$user->email => $user->name],
         );
     }
