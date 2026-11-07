@@ -441,7 +441,7 @@ export function TransactionsPage() {
                           {needsReview(transaction) && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">Dati da verificare</span>}
                         </div>
                       </td>
-                      <td className={`whitespace-nowrap px-5 py-4 text-right font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
+                      <td className={`financial-value whitespace-nowrap px-5 py-4 text-right font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
                         {transaction.type === 'income' ? '+' : '−'} {formatAmount(transaction)}
                       </td>
                       {!isSelecting && <td className="px-5 py-4">
@@ -480,7 +480,7 @@ export function TransactionsPage() {
                         {needsReview(transaction) && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">Dati da verificare</span>}
                       </div>
                     </div>
-                    <p className={`shrink-0 font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
+                    <p className={`financial-value shrink-0 font-semibold ${transaction.type === 'income' ? 'text-emerald-300' : 'text-foreground'}`}>
                       {transaction.type === 'income' ? '+' : '−'} {formatAmount(transaction)}
                     </p>
                   </div>
@@ -496,7 +496,7 @@ export function TransactionsPage() {
         )}
 
         {meta.last_page > 1 && (
-          <div className="flex items-center justify-between border-t px-5 py-4 text-sm text-muted-foreground">
+          <div className="flex items-center justify-between border-t border-white/10 px-5 py-4 text-sm text-muted-foreground">
             <span>Pagina {meta.current_page} di {meta.last_page}</span>
             <div className="flex gap-2">
               <Button

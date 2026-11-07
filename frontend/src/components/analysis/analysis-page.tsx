@@ -27,7 +27,7 @@ function TransactionLine({ transaction, currency }: { transaction: Transaction; 
         <p className="truncate font-medium text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground">{metadata}</p>
       </div>
-      <span className="shrink-0 font-semibold tabular-nums">{money(transaction.amount, currency)}</span>
+      <span className="financial-value shrink-0 font-semibold">{money(transaction.amount, currency)}</span>
     </div>
   )
 }
@@ -102,7 +102,7 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
                     <ResponsiveContainer width="100%" height="100%"><BarChart data={categories} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}><CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} /><XAxis dataKey="category" stroke="#71717a" tickLine={false} axisLine={false} fontSize={11} /><YAxis stroke="#71717a" tickLine={false} axisLine={false} fontSize={11} /><Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: '#0c110e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }} formatter={(value) => money(String(value), data.currency)} /><Bar dataKey="amount" fill="#34d399" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer>
                   </div>
                 ) : categories.length === 1 ? (
-                  <div className="rounded-xl border border-white/10 p-4"><div className="flex items-center justify-between gap-4"><div><p className="font-medium">{categories[0].category}</p><p className="text-xs text-muted-foreground">{categories[0].transaction_count} movimenti categorizzati</p></div><p className="font-data text-lg text-emerald-300">{money(categories[0].amount, data.currency)}</p></div><p className="mt-4 text-sm text-muted-foreground">Il grafico comparativo apparirà quando saranno presenti almeno due categorie.</p></div>
+                  <div className="border-y border-white/10 py-4"><div className="flex items-center justify-between gap-4"><div><p className="font-medium">{categories[0].category}</p><p className="text-xs text-muted-foreground">{categories[0].transaction_count} movimenti categorizzati</p></div><p className="financial-value text-lg text-emerald-300">{money(categories[0].amount, data.currency)}</p></div><p className="mt-4 text-sm text-muted-foreground">Il grafico comparativo apparirà quando saranno presenti almeno due categorie.</p></div>
                 ) : (
                   <div className="py-8 text-center text-sm text-muted-foreground">Assegna una categoria alle spese per visualizzare la distribuzione.</div>
                 )}
@@ -122,14 +122,14 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
             ) : data.insights.map((insight) => (
               <Card key={`${insight.kind}-${insight.title}`} className="border-white/10 bg-card">
                 <CardHeader className="flex-row gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-400/15 text-emerald-300">{insight.kind === 'improvement' ? <TrendingDown /> : <Lightbulb />}</span><div><CardTitle>{insight.title}</CardTitle><CardDescription>{insight.message}</CardDescription></div></CardHeader>
-                {Number(insight.potential_saving) > 0 && <CardContent><p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">Spesa in più rispetto allo stesso periodo precedente: <strong>{money(insight.potential_saving, data.currency)}</strong></p></CardContent>}
+                {Number(insight.potential_saving) > 0 && <CardContent><p className="border-l border-emerald-300/40 pl-3 text-sm text-emerald-100">Spesa in più rispetto allo stesso periodo precedente: <strong className="financial-value">{money(insight.potential_saving, data.currency)}</strong></p></CardContent>}
               </Card>
             ))}
           </section>
 
           <aside className="space-y-5">
             <Card className="border-white/10 bg-card"><CardHeader><CardTitle className="flex items-center gap-2"><Copy className="size-4 text-amber-400" /> Possibili duplicati</CardTitle><CardDescription>Stessa data e stesso importo: verifica prima di eliminare.</CardDescription></CardHeader><CardContent>
-              {duplicateStatus === 'insufficient' ? <p className="text-sm leading-6 text-muted-foreground">Dati insufficienti: servono almeno 2 spese per cercare corrispondenze.</p> : duplicateStatus === 'clear' ? <p className="text-sm leading-6 text-muted-foreground">Analisi completata: nessun possibile duplicato rilevato.</p> : data.duplicates.map((group, index) => <div key={index} className="mb-4 rounded-lg border border-white/10 p-3 last:mb-0"><p className="mb-2 text-xs text-muted-foreground">{group.reason}</p>{group.transactions.map((item) => <TransactionLine key={item.id} transaction={item} currency={data.currency} />)}</div>)}
+              {duplicateStatus === 'insufficient' ? <p className="text-sm leading-6 text-muted-foreground">Dati insufficienti: servono almeno 2 spese per cercare corrispondenze.</p> : duplicateStatus === 'clear' ? <p className="text-sm leading-6 text-muted-foreground">Analisi completata: nessun possibile duplicato rilevato.</p> : data.duplicates.map((group, index) => <div key={index} className="mb-4 border-t border-white/10 pt-3 last:mb-0"><p className="mb-2 text-xs text-muted-foreground">{group.reason}</p>{group.transactions.map((item) => <TransactionLine key={item.id} transaction={item} currency={data.currency} />)}</div>)}
             </CardContent></Card>
 
             <Card className="border-white/10 bg-card"><CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="size-4 text-rose-400" /> Spese anomale</CardTitle><CardDescription>Importi confrontati con le tue abitudini registrate.</CardDescription></CardHeader><CardContent>

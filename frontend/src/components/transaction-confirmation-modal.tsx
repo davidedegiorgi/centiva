@@ -39,7 +39,7 @@ export function TransactionConfirmationModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/75 p-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
-      <div className="max-h-[calc(100svh-8rem)] w-full max-w-xl overflow-y-auto rounded-[1.75rem] border border-white/15 bg-[#0b100d] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.75)] sm:max-h-[calc(100svh-3rem)] sm:p-6">
+      <div className="max-h-[calc(100svh-8rem)] w-full max-w-2xl overflow-y-auto border-y border-white/15 bg-[#080d0b]/95 p-5 shadow-[0_40px_140px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:max-h-[calc(100svh-3rem)] sm:p-8">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">{eyebrow}</p>
@@ -50,7 +50,7 @@ export function TransactionConfirmationModal({
         </div>
 
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={submit}>
-          {error && <p className="rounded-xl border border-rose-400/25 bg-rose-400/10 p-3 text-sm text-rose-100 sm:col-span-2">{error}</p>}
+          {error && <p className="border-l border-rose-400/60 bg-rose-400/[0.06] p-3 text-sm text-rose-100 sm:col-span-2">{error}</p>}
           <div className="grid gap-2">
             <Label htmlFor={`${id}-type`}>Tipo</Label>
             <select id={`${id}-type`} className="h-10 rounded-lg border border-white/15 bg-black/25 px-3" value={draft.type} onChange={(event) => onChange({ ...draft, type: event.target.value as TransactionType })}>
