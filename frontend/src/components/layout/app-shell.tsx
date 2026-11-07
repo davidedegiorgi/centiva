@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import { CalendarClock, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle, LogOut, Plus, Target, type LucideIcon } from 'lucide-react'
+import { CalendarClock, ChartNoAxesCombined, Lightbulb, ListMinus, LoaderCircle, LogOut, Plus, type LucideIcon } from 'lucide-react'
 
 import { BrandLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
 import { VoiceCommandButton } from '@/components/voice-command-button'
 import type { User } from '@/types/auth'
 
-export type AppView = 'capture' | 'dashboard' | 'transactions' | 'import' | 'analysis' | 'planning' | 'goals' | 'profile'
+export type AppView = 'capture' | 'dashboard' | 'transactions' | 'import' | 'analysis' | 'planning' | 'profile'
 
 const navigationItems: Array<{ view: AppView; label: string; icon: LucideIcon }> = [
   { view: 'dashboard', label: 'Dashboard', icon: ChartNoAxesCombined },
@@ -14,7 +14,6 @@ const navigationItems: Array<{ view: AppView; label: string; icon: LucideIcon }>
   { view: 'capture', label: 'Aggiungi', icon: Plus },
   { view: 'analysis', label: 'Insights', icon: Lightbulb },
   { view: 'planning', label: 'Pianifica', icon: CalendarClock },
-  { view: 'goals', label: 'INcentiva', icon: Target },
 ]
 
 interface AppShellProps {

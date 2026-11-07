@@ -17,7 +17,6 @@ const TransactionsPage = lazy(async () => ({ default: (await import('@/component
 const ImportPage = lazy(async () => ({ default: (await import('@/components/import/import-page')).ImportPage }))
 const AnalysisPage = lazy(async () => ({ default: (await import('@/components/analysis/analysis-page')).AnalysisPage }))
 const PlanningPage = lazy(async () => ({ default: (await import('@/components/planning/planning-page')).PlanningPage }))
-const GoalsPage = lazy(async () => ({ default: (await import('@/components/goals/goals-page')).GoalsPage }))
 const ProfilePage = lazy(async () => ({ default: (await import('@/components/profile/profile-page')).ProfilePage }))
 const MobileCapturePage = lazy(async () => ({ default: (await import('@/components/capture/mobile-capture-page')).MobileCapturePage }))
 
@@ -161,8 +160,6 @@ function App() {
           <AnalysisPage onOpenTransactions={() => changeView('transactions')} />
         ) : activeView === 'planning' ? (
           <PlanningPage />
-        ) : activeView === 'goals' ? (
-          <GoalsPage />
         ) : (
           <ProfilePage
             user={user}
