@@ -31,7 +31,9 @@ interface VoiceCommandButtonProps {
 
 export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const processingTimerRef = useRef<number | null>(null)
   const [isListening, setIsListening] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [draft, setDraft] = useState<VoiceTransactionDraft | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -39,7 +41,10 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
   const speechWindow = window as SpeechWindow
   const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition
 
-  useEffect(() => () => recognitionRef.current?.stop(), [])
+  useEffect(() => () => {
+    recognitionRef.current?.stop()
+    if (processingTimerRef.current !== null) window.clearTimeout(processingTimerRef.current)
+  }, [])
 
   function startListening() {
     if (!Recognition) {
@@ -55,17 +60,25 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
     recognition.interimResults = false
     recognition.onresult = (event) => {
       const transcript = event.results[0]?.[0]?.transcript?.trim() ?? ''
-      const parsed = parseVoiceTransaction(transcript)
-      if (!parsed) {
-        setMessage(`Non ho riconosciuto tipo e importo. ${voiceCommandExamples}`)
-        return
-      }
-      setDraft(parsed)
       setMessage(null)
+      setIsProcessing(true)
+      processingTimerRef.current = window.setTimeout(() => {
+        const parsed = parseVoiceTransaction(transcript)
+        setIsProcessing(false)
+        processingTimerRef.current = null
+        if (!parsed) {
+          setMessage(`Non ho riconosciuto tipo e importo. ${voiceCommandExamples}`)
+          return
+        }
+        setDraft(parsed)
+      }, 350)
     }
-    recognition.onerror = (event) => setMessage(event.error === 'not-allowed'
-      ? 'Consenti l’uso del microfono nelle impostazioni del browser.'
-      : 'Non sono riuscito ad ascoltare. Riprova.')
+    recognition.onerror = (event) => {
+      setIsProcessing(false)
+      setMessage(event.error === 'not-allowed'
+        ? 'Consenti l’uso del microfono nelle impostazioni del browser.'
+        : 'Non sono riuscito ad ascoltare. Riprova.')
+    }
     recognition.onend = () => { setIsListening(false); recognitionRef.current = null }
     recognitionRef.current = recognition
     setMessage('Ti ascolto… puoi dire semplicemente “50 spesa”.')
@@ -83,7 +96,7 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
     setIsSaving(true)
     setError(null)
     try {
-      await transactionApi.create({
+      const response = await transactionApi.create({
         type: draft.type,
         amount: draft.amount,
         currency: draft.currency,
@@ -92,7 +105,9 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
       })
       setDraft(null)
       setMessage('Movimento registrato correttamente.')
-      window.dispatchEvent(new CustomEvent('centiva:transactions-changed'))
+      window.dispatchEvent(new CustomEvent('centiva:transactions-changed', {
+        detail: { transaction: response.data },
+      }))
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Non è stato possibile registrare il movimento.')
     } finally {
@@ -110,14 +125,16 @@ export function VoiceCommandButton({ placement = 'header' }: VoiceCommandButtonP
         size={placement === 'camera' ? 'icon' : 'default'}
         type="button"
         onClick={startListening}
-        aria-label={isListening ? 'Interrompi registrazione vocale' : 'Registra movimento con la voce'}
+        disabled={isProcessing}
+        aria-label={isProcessing ? 'Elaborazione del movimento vocale' : isListening ? 'Interrompi registrazione vocale' : 'Registra movimento con la voce'}
         aria-pressed={isListening}
       >
-        {isListening ? <MicOff className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" /> : <Mic className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" />}
+        {isProcessing ? <LoaderCircle className={`${placement === 'camera' ? 'size-5' : ''} animate-spin`} aria-hidden="true" /> : isListening ? <MicOff className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" /> : <Mic className={placement === 'camera' ? 'size-5' : undefined} aria-hidden="true" />}
         {placement === 'header' && <span className="hidden lg:inline">Registra con la voce</span>}
       </Button>
 
       {createPortal(<>
+      {isProcessing && <div className="fixed left-1/2 top-[calc(1rem+env(safe-area-inset-top))] z-[110] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center justify-center gap-3 rounded-2xl border border-emerald-300/25 bg-[#090c0a]/95 px-4 py-3 text-sm text-emerald-100 shadow-[0_18px_60px_rgba(16,185,129,0.18)] backdrop-blur-xl" role="status" aria-live="polite"><LoaderCircle className="size-4 animate-spin text-emerald-300" aria-hidden="true" /><span>Elaborazione del movimento…</span></div>}
       {message && <div className="fixed left-1/2 top-[calc(1rem+env(safe-area-inset-top))] z-[110] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-2xl border border-white/15 bg-[#090c0a]/95 px-4 py-3 text-center text-sm text-zinc-200 shadow-2xl backdrop-blur-xl" role="status"><span className="inline-flex items-center gap-2">{message.startsWith('Movimento') && <Check className="size-4 text-emerald-300" />}{message}</span><button className="ml-3 text-emerald-300" type="button" onClick={() => setMessage(null)}>Chiudi</button></div>}
 
       {draft && (

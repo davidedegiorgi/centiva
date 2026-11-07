@@ -115,11 +115,24 @@ export function MobileCapturePage() {
   }, [startCamera])
 
   useEffect(() => {
-    void dashboardApi.show().then(({ data }) => {
+    let isMounted = true
+    const loadMonthlySummary = () => dashboardApi.show().then(({ data }) => {
+      if (!isMounted) return
       setMonthlySavings(Number(data.summary.net_savings))
       setIncome(Number(data.summary.income))
       setExpenses(Number(data.summary.expenses))
-    }).catch(() => setError('Non è stato possibile caricare il riepilogo mensile.'))
+      setError(null)
+    }).catch(() => {
+      if (isMounted) setError('Non è stato possibile aggiornare il riepilogo mensile.')
+    })
+
+    void loadMonthlySummary()
+    window.addEventListener('centiva:transactions-changed', loadMonthlySummary)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('centiva:transactions-changed', loadMonthlySummary)
+    }
   }, [])
 
   async function analyzeImage(image: File | HTMLCanvasElement) {
