@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
 {
@@ -48,7 +49,7 @@ class ProfileController extends Controller
             $request->session()->regenerateToken();
         }
 
-        DB::transaction(function () use ($email, $user, $userId): void {
+        DB::transaction(function () use ($email, $userId): void {
             DB::table('password_reset_tokens')->where('email', $email)->delete();
 
             if (config('session.driver') === 'database') {
@@ -65,6 +66,10 @@ class ProfileController extends Controller
         });
 
         $accountEmailService->sendDeletionConfirmation($email, $name);
+
+        Log::info('Account Centiva eliminato e notifica di conferma elaborata.', [
+            'email_hash' => hash('sha256', strtolower($email)),
+        ]);
 
         return response()->noContent();
     }

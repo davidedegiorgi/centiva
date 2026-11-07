@@ -7,6 +7,7 @@ use App\Notifications\WelcomeToCentiva;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
 use Laravel\Socialite\Two\User as GoogleUser;
 use Mockery;
 use Tests\TestCase;
@@ -81,6 +82,50 @@ class GoogleAuthControllerTest extends TestCase
             'google_id' => 'google-456',
         ]);
         Notification::assertNothingSent();
+    }
+
+    public function test_google_callback_welcomes_and_verifies_an_existing_pending_user(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create(['email' => 'pending@example.com']);
+        $googleUser = (new GoogleUser)->setRaw([
+            'email_verified' => true,
+        ])->map([
+            'id' => 'google-pending',
+            'name' => 'Utente Pending',
+            'email' => 'pending@example.com',
+        ]);
+
+        $provider = Mockery::mock();
+        $provider->shouldReceive('user')->once()->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturn($provider);
+
+        $this->get('/auth/google/callback')->assertRedirect('http://localhost:5173?auth=google');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->refresh()->email_verified_at);
+        Notification::assertSentTo($user, WelcomeToCentiva::class);
+    }
+
+    public function test_google_redirect_always_asks_the_user_to_choose_an_account(): void
+    {
+        $provider = Mockery::mock(AbstractProvider::class);
+        $provider->shouldReceive('scopes')
+            ->once()
+            ->with(['openid', 'email', 'profile'])
+            ->andReturnSelf();
+        $provider->shouldReceive('with')
+            ->once()
+            ->with(['prompt' => 'select_account'])
+            ->andReturnSelf();
+        $provider->shouldReceive('redirect')
+            ->once()
+            ->andReturn(redirect()->away('https://accounts.google.com/o/oauth2/auth'));
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturn($provider);
+
+        $this->get('/auth/google/redirect')
+            ->assertRedirect('https://accounts.google.com/o/oauth2/auth');
     }
 
     public function test_unverified_google_email_is_rejected(): void

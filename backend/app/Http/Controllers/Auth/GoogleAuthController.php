@@ -7,9 +7,9 @@ use App\Models\User;
 use App\Services\AccountEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -39,6 +39,7 @@ class GoogleAuthController extends Controller
 
         return Socialite::driver('google')
             ->scopes(['openid', 'email', 'profile'])
+            ->with(['prompt' => 'select_account'])
             ->redirect();
     }
 
@@ -77,6 +78,7 @@ class GoogleAuthController extends Controller
         }
 
         $user = $userByGoogleId ?? $userByEmail ?? new User;
+        $wasVerified = $user->exists && $user->email_verified_at !== null;
 
         if ($user->google_id && $user->google_id !== $googleId) {
             return $this->frontendRedirect('Questa email è già collegata a un altro account Google.');
@@ -99,7 +101,7 @@ class GoogleAuthController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
-        if ($isNewUser) {
+        if ($isNewUser || ! $wasVerified) {
             $accountEmailService->sendWelcome($user);
         }
 

@@ -79,6 +79,7 @@ class BrevoChannel
         foreach ($route as $email => $name) {
             if (is_int($email)) {
                 $recipients[] = ['email' => (string) $name];
+
                 continue;
             }
 
