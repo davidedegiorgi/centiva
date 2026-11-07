@@ -2,13 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Camera, Check, Images, LoaderCircle } from 'lucide-react'
 
 import { LiquidNumber } from '@/components/effects/liquid-number'
+import { TransactionConfirmationModal } from '@/components/transaction-confirmation-modal'
 import { VoiceCommandButton } from '@/components/voice-command-button'
-import { dashboardApi, transactionApi } from '@/lib/api'
+import { ApiError, dashboardApi, transactionApi } from '@/lib/api'
 import { parseOcrText } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
+import type { TransactionPayload } from '@/types/transaction'
 
 const MAX_CAPTURE_SIDE = 2600
 const CAMERA_RELEASE_DELAY = 1500
+
+interface PendingScan extends TransactionPayload {
+  id: string
+  description: string
+  merchant: string
+  notes: string
+}
 
 let sharedCameraStream: MediaStream | null = null
 let pendingCameraStream: Promise<MediaStream> | null = null
@@ -64,6 +73,10 @@ export function MobileCapturePage() {
   const [expenses, setExpenses] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [savingsEffect, setSavingsEffect] = useState<{ delta: number; key: number } | null>(null)
+  const [pendingScans, setPendingScans] = useState<PendingScan[]>([])
+  const [isSavingScan, setIsSavingScan] = useState(false)
+  const [scanConfirmationError, setScanConfirmationError] = useState<string | null>(null)
+  const pendingScan = pendingScans[0] ?? null
 
   const startCamera = useCallback(async () => {
     const requestId = ++cameraRequest.current
@@ -144,48 +157,64 @@ export function MobileCapturePage() {
       const text = await recognizeImage(image, setProgress)
       const rows = parseOcrText(text)
       if (rows.length === 0) throw new Error('Non ho trovato importi leggibili. Avvicina il documento e riprova.')
-
-      await transactionApi.bulk({
-        transactions: rows.map((draft) => ({
-          type: draft.type,
-          amount: Number(draft.amount),
-          currency: draft.currency,
-          occurred_on: draft.occurred_on,
-          description: draft.description.trim() || 'Movimento importato',
-          merchant: draft.merchant.trim() || null,
-          category: draft.category.trim() || 'Altro',
-          notes: draft.notes.trim() || null,
-          source: 'ocr',
-        })),
-      })
-
-      const delta = rows.reduce((total, draft) => {
-        const amount = Number(draft.amount)
-        return total + (draft.type === 'income' ? amount : -amount)
-      }, 0)
-      const scannedIncome = rows
-        .filter((draft) => draft.type === 'income')
-        .reduce((total, draft) => total + Number(draft.amount), 0)
-      const scannedExpenses = rows
-        .filter((draft) => draft.type === 'expense')
-        .reduce((total, draft) => total + Number(draft.amount), 0)
-
-      setMonthlySavings((current) => current + delta)
-      setIncome((current) => current + scannedIncome)
-      setExpenses((current) => current + scannedExpenses)
-      setSavingsEffect({ delta, key: Date.now() })
-      window.setTimeout(() => setSavingsEffect(null), 1800)
-
-      void dashboardApi.show().then(({ data }) => {
-        setMonthlySavings(Number(data.summary.net_savings))
-        setIncome(Number(data.summary.income))
-        setExpenses(Number(data.summary.expenses))
-      })
+      setPendingScans(rows.map((draft) => ({
+        id: draft.id,
+        type: draft.type,
+        amount: Number(draft.amount),
+        currency: draft.currency,
+        occurred_on: draft.occurred_on,
+        description: draft.description.trim() || 'Movimento importato',
+        merchant: draft.merchant.trim(),
+        category: draft.category.trim() || 'Altro',
+        notes: draft.notes.trim(),
+      })))
+      setScanConfirmationError(null)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'La scansione o il salvataggio non sono riusciti.')
     } finally {
       setIsScanning(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function updatePendingScan(next: TransactionPayload) {
+    setPendingScans((current) => current.length > 0
+      ? [{ ...current[0], ...next }, ...current.slice(1)]
+      : current)
+  }
+
+  async function confirmPendingScan() {
+    if (!pendingScan) return
+    setIsSavingScan(true)
+    setScanConfirmationError(null)
+
+    try {
+      await transactionApi.bulk({
+        transactions: [{
+          type: pendingScan.type,
+          amount: pendingScan.amount,
+          currency: pendingScan.currency,
+          occurred_on: pendingScan.occurred_on,
+          description: pendingScan.description,
+          merchant: pendingScan.merchant || null,
+          category: pendingScan.category || 'Altro',
+          notes: pendingScan.notes || null,
+          source: 'ocr',
+        }],
+      })
+
+      const delta = pendingScan.type === 'income' ? pendingScan.amount : -pendingScan.amount
+      setMonthlySavings((current) => current + delta)
+      if (pendingScan.type === 'income') setIncome((current) => current + pendingScan.amount)
+      else setExpenses((current) => current + pendingScan.amount)
+      setSavingsEffect({ delta, key: Date.now() })
+      window.setTimeout(() => setSavingsEffect(null), 1800)
+      setPendingScans((current) => current.slice(1))
+      window.dispatchEvent(new CustomEvent('centiva:transactions-changed'))
+    } catch (caught) {
+      setScanConfirmationError(caught instanceof ApiError ? caught.message : 'Non è stato possibile registrare il movimento.')
+    } finally {
+      setIsSavingScan(false)
     }
   }
 
@@ -250,7 +279,7 @@ export function MobileCapturePage() {
         {isScanning && (
           <div className="w-full max-w-xs rounded-full border border-emerald-300/20 bg-black/65 p-1.5 backdrop-blur-xl">
             <div className="h-1.5 rounded-full bg-emerald-400 transition-[width] duration-300" style={{ width: `${Math.max(progress, 4)}%` }} />
-            <p className="mt-2 text-center font-data text-[0.6rem] tracking-[0.18em] text-emerald-200">ANALISI E SALVATAGGIO {progress}%</p>
+            <p className="mt-2 text-center font-data text-[0.6rem] tracking-[0.18em] text-emerald-200">ANALISI DOCUMENTO {progress}%</p>
           </div>
         )}
 
@@ -277,6 +306,17 @@ export function MobileCapturePage() {
           </div>
         </div>
       )}
+
+      <TransactionConfirmationModal
+        draft={pendingScan}
+        eyebrow="Movimento da foto"
+        sourceText={pendingScans.length > 1 ? `${pendingScans.length} movimenti riconosciuti: confermali uno alla volta.` : 'Controlla i dati letti dalla foto.'}
+        isSaving={isSavingScan}
+        error={scanConfirmationError}
+        onChange={updatePendingScan}
+        onCancel={() => { setPendingScans([]); setScanConfirmationError(null) }}
+        onConfirm={confirmPendingScan}
+      />
 
     </main>
   )
