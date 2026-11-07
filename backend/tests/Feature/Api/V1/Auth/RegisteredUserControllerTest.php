@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Notifications\VerifyEmailCode;
 use App\Services\EmailVerificationService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Mockery;
 use RuntimeException;
@@ -64,7 +65,11 @@ class RegisteredUserControllerTest extends TestCase
     public function test_email_delivery_failure_returns_503_without_leaving_an_incomplete_user(): void
     {
         $verificationService = Mockery::mock(EmailVerificationService::class);
-        $verificationService->shouldReceive('issue')->once()->andThrow(new RuntimeException('SMTP unavailable'));
+        $verificationService->shouldReceive('issue')->once()->andReturnUsing(function (): never {
+            $this->assertSame(0, DB::transactionLevel());
+
+            throw new RuntimeException('SMTP unavailable');
+        });
         $this->app->instance(EmailVerificationService::class, $verificationService);
 
         $this->postJson('/api/v1/auth/register', [

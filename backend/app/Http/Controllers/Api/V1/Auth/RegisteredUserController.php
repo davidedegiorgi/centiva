@@ -16,20 +16,28 @@ class RegisteredUserController extends Controller
         RegisterRequest $request,
         EmailVerificationService $verificationService,
     ): JsonResponse {
+        $user = null;
+
         try {
-            $user = DB::transaction(function () use ($request, $verificationService): User {
-                $user = User::query()->create($request->safe()->only([
+            // Never keep a database transaction open while waiting for an
+            // external mail server. Persist first, then deliver the code.
+            $user = DB::transaction(function () use ($request): User {
+                return User::query()->create($request->safe()->only([
                     'name',
                     'email',
                     'password',
                 ]));
-
-                $verificationService->issue($user);
-
-                return $user;
             });
+
+            $verificationService->issue($user);
         } catch (Throwable $exception) {
             report($exception);
+
+            // A user without a deliverable verification code must not remain
+            // in the database and block a subsequent registration attempt.
+            if ($user instanceof User && $user->exists) {
+                $user->delete();
+            }
 
             return response()->json([
                 'message' => 'Non siamo riusciti a inviare il codice. Riprova tra poco.',

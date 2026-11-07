@@ -37,6 +37,9 @@ class ProfileController extends Controller
         $email = $user->email;
         $name = $user->name;
 
+        // Logout first: the session guard rotates and persists the remember
+        // token during logout, which would otherwise recreate stale state
+        // after the user row has already been deleted.
         Auth::guard('web')->logout();
         Auth::guard('sanctum')->forgetUser();
 
@@ -54,7 +57,9 @@ class ProfileController extends Controller
                     ->delete();
             }
 
-            $user->delete();
+            if (! $user->delete() || DB::table('users')->where('id', $userId)->exists()) {
+                throw new \RuntimeException('Eliminazione account non completata.');
+            }
         });
 
         $accountEmailService->sendDeletionConfirmationAfterResponse($email, $name);
