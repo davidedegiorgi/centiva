@@ -67,6 +67,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const response = await fetch(`${backendUrl}${path}`, {
     ...options,
+    cache: options.cache ?? 'no-store',
     credentials: 'include',
     headers,
   })

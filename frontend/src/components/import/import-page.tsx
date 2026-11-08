@@ -126,6 +126,7 @@ export function ImportPage() {
       setSuccess(`${response.data.length} ${response.data.length === 1 ? 'transazione importata' : 'transazioni importate'} correttamente.`)
       setDrafts([])
       setOcrText('')
+      window.dispatchEvent(new CustomEvent('centiva:transactions-changed'))
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Non è stato possibile salvare le transazioni.')
     } finally {
