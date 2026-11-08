@@ -21,7 +21,7 @@ class ResetPasswordRequest extends FormRequest
             'password' => [
                 'required',
                 'confirmed',
-                Password::min(12)->letters()->mixedCase()->numbers()->symbols(),
+                Password::min(6)->letters()->mixedCase()->numbers()->symbols(),
             ],
         ];
     }
@@ -34,6 +34,7 @@ class ResetPasswordRequest extends FormRequest
             'email.required' => "L'indirizzo email è obbligatorio.",
             'email.email' => "L'indirizzo email non è valido.",
             'password.confirmed' => 'Le password non coincidono.',
+            'password.min' => 'La password deve contenere almeno 6 caratteri.',
         ];
     }
 }

@@ -35,7 +35,7 @@ class RegisterRequest extends FormRequest
             'password' => [
                 'required',
                 'confirmed',
-                Password::min(12)->letters()->mixedCase()->numbers()->symbols(),
+                Password::min(6)->letters()->mixedCase()->numbers()->symbols(),
             ],
         ];
     }
@@ -49,6 +49,7 @@ class RegisterRequest extends FormRequest
             'email.email' => "L'indirizzo email non è valido.",
             'email.unique' => 'Esiste già un account con questo indirizzo email.',
             'password.confirmed' => 'Le password non coincidono.',
+            'password.min' => 'La password deve contenere almeno 6 caratteri.',
         ];
     }
 }

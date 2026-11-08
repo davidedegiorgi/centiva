@@ -54,15 +54,15 @@ class PasswordResetControllerTest extends TestCase
         $this->postJson('/api/v1/auth/reset-password', [
             'token' => $token,
             'email' => 'mario@example.com',
-            'password' => 'NuovaPassword!2026',
-            'password_confirmation' => 'NuovaPassword!2026',
+            'password' => 'Aa1!aa',
+            'password_confirmation' => 'Aa1!aa',
         ])->assertOk()->assertJsonPath(
             'message',
             'Password aggiornata. Ora puoi accedere con le nuove credenziali.',
         );
 
         $user->refresh();
-        $this->assertTrue(Hash::check('NuovaPassword!2026', $user->password));
+        $this->assertTrue(Hash::check('Aa1!aa', $user->password));
         $this->assertNotSame('old-token', $user->remember_token);
     }
 
@@ -79,5 +79,19 @@ class PasswordResetControllerTest extends TestCase
             'errors.email.0',
             'Il link è scaduto o non è valido. Richiedine uno nuovo.',
         );
+    }
+
+    public function test_password_shorter_than_six_characters_is_rejected(): void
+    {
+        $user = User::factory()->create(['email' => 'mario@example.com']);
+        $token = Password::broker()->createToken($user);
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'token' => $token,
+            'email' => 'mario@example.com',
+            'password' => 'Aa1!a',
+            'password_confirmation' => 'Aa1!a',
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.password.0', 'La password deve contenere almeno 6 caratteri.');
     }
 }

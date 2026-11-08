@@ -36,13 +36,14 @@ interface PasswordFieldProps {
   value: string
   visible: boolean
   autoComplete: string
+  minLength?: number
   error?: string[]
   action?: ReactNode
   onChange: (value: string) => void
   onToggle: () => void
 }
 
-function PasswordField({ id, label, value, visible, autoComplete, error, action, onChange, onToggle }: PasswordFieldProps) {
+function PasswordField({ id, label, value, visible, autoComplete, minLength, error, action, onChange, onToggle }: PasswordFieldProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
@@ -56,6 +57,9 @@ function PasswordField({ id, label, value, visible, autoComplete, error, action,
           name={id.replaceAll('-', '_')}
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
+          minLength={minLength}
+          pattern={minLength ? '(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{6,}' : undefined}
+          title={minLength ? 'Almeno 6 caratteri con maiuscola, minuscola, numero e simbolo.' : undefined}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={Boolean(error)}
@@ -383,6 +387,7 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
                     value={password}
                     visible={showPassword}
                     autoComplete={isRegister || isReset ? 'new-password' : 'current-password'}
+                    minLength={isRegister || isReset ? 6 : undefined}
                     error={error?.errors.password}
                     onChange={setPassword}
                     onToggle={() => setShowPassword((current) => !current)}
@@ -406,12 +411,13 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
                       value={passwordConfirmation}
                       visible={showConfirmation}
                       autoComplete="new-password"
+                      minLength={6}
                       error={error?.errors.password_confirmation}
                       onChange={setPasswordConfirmation}
                       onToggle={() => setShowConfirmation((current) => !current)}
                     />
                     <p className="-mt-2 text-xs leading-5 text-muted-foreground">
-                      Almeno 12 caratteri, con maiuscole, minuscole, numeri e simboli.
+                      Almeno 6 caratteri, con maiuscole, minuscole, numeri e simboli.
                     </p>
                   </>
                 )}

@@ -30,8 +30,8 @@ class RegisteredUserControllerTest extends TestCase
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Giulia Bianchi',
             'email' => 'giulia@example.com',
-            'password' => 'SecurePass1!',
-            'password_confirmation' => 'SecurePass1!',
+            'password' => 'Aa1!aa',
+            'password_confirmation' => 'Aa1!aa',
         ]);
 
         $response
@@ -43,7 +43,7 @@ class RegisteredUserControllerTest extends TestCase
 
         $this->assertGuest();
         $this->assertModelExists($user);
-        $this->assertNotSame('SecurePass1!', $user->password);
+        $this->assertNotSame('Aa1!aa', $user->password);
         $this->assertNull($user->email_verified_at);
         $this->assertDatabaseHas('email_verification_codes', ['user_id' => $user->id, 'attempts' => 0]);
         Notification::assertSentTo($user, VerifyEmailCode::class);
@@ -60,6 +60,32 @@ class RegisteredUserControllerTest extends TestCase
             ->assertJsonValidationErrors(['password']);
 
         $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_password_shorter_than_six_characters_is_rejected(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Giulia Bianchi',
+            'email' => 'giulia@example.com',
+            'password' => 'Aa1!a',
+            'password_confirmation' => 'Aa1!a',
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.password.0', 'La password deve contenere almeno 6 caratteri.');
+
+        $this->assertDatabaseMissing('users', ['email' => 'giulia@example.com']);
+    }
+
+    public function test_password_still_requires_mixed_case_number_and_symbol(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Giulia Bianchi',
+            'email' => 'giulia@example.com',
+            'password' => 'abcdef',
+            'password_confirmation' => 'abcdef',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
+
+        $this->assertDatabaseMissing('users', ['email' => 'giulia@example.com']);
     }
 
     public function test_email_delivery_failure_returns_503_without_leaving_an_incomplete_user(): void
