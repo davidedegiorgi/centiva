@@ -255,10 +255,13 @@ function dateIn(value: string): string | null {
 
 function amountCandidates(line: string): AmountCandidate[] {
   const date = dateIn(line)
-  const normalizedMoney = line
+  let normalizedMoney = line
     .replace(/(\d)\s+([0-9]{2})(?=\s*(?:€|EUR)(?:\s|$))/gi, '$1,$2')
     .replace(/(€\s*\d+)\s+([0-9]{2})\b/gi, '$1,$2')
     .replace(/(\d)[,.:;](\d)[)\]oO](?=\D|$)/g, '$1,$20')
+  if (/totale|importo|pagamento|pagato|contante|carta|bancomat|pos/i.test(line)) {
+    normalizedMoney = normalizedMoney.replace(/\b(\d{1,6})\s+([0-9]{2})\b/g, '$1,$2')
+  }
   let sanitized = date ? normalizedMoney.replace(date, ' '.repeat(date.length)) : normalizedMoney
   sanitized = sanitized.replace(colonTimePattern, (time) => ' '.repeat(time.length))
   sanitized = sanitized.replace(dotTimePattern, (time, offset: number) => {
@@ -357,7 +360,7 @@ function receiptScore(line: string, candidate: AmountCandidate): number {
     score += 140
   } else if (/\btotale[^\d]*$/i.test(prefix)) {
     score += 100
-  } else if (/\b(?:pagato|carta|bancomat|pos)\b[^\d]*$/i.test(prefix)) {
+  } else if (/\b(?:pagamento|pagato|carta|bancomat|pos)\b[^\d]*$/i.test(prefix)) {
     score += 70
   } else if (/\bcontan[a-z]*\b[^\d]*$/i.test(prefix)) {
     score += 55
@@ -497,8 +500,10 @@ export function parseOcrText(text: string): ImportDraft[] {
     !taxAmounts.has(Number(row.amount).toFixed(2))
     || confirmedAmounts.has(Number(row.amount).toFixed(2))
   )))
-  const selectedRows = [...safeVariants].reverse().find((rows) => rows.length > 0) ?? []
   const receiptLike = variants.some((variant) => isReceiptText(variant.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)))
+  const selectedRows = receiptLike
+    ? [...safeVariants].reverse().find((rows) => rows.length > 0) ?? []
+    : safeVariants.reduce<ImportDraft[]>((best, rows) => rows.length > best.length ? rows : best, [])
 
   return selectedRows.map((row) => ({
     ...row,

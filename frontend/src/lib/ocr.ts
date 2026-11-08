@@ -6,8 +6,6 @@ type ProgressListener = (progress: number) => void
 type OcrImage = File | HTMLCanvasElement
 
 const MAX_UPLOAD_SIDE = 2800
-const MIN_RECEIPT_SIDE = 2400
-const RECEIPT_DETECTION_SIDE = 800
 const FAST_LANGUAGE_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 
 let workerPromise: Promise<Worker> | null = null
@@ -148,50 +146,15 @@ export function findReceiptBounds(pixels: Uint8ClampedArray, width: number, heig
   return best?.bounds ?? null
 }
 
-function detectReceiptBounds(bitmap: ImageBitmap): ImageBounds | null {
-  const detectionScale = Math.min(1, RECEIPT_DETECTION_SIDE / Math.max(bitmap.width, bitmap.height))
-  const width = Math.max(1, Math.round(bitmap.width * detectionScale))
-  const height = Math.max(1, Math.round(bitmap.height * detectionScale))
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const context = canvas.getContext('2d', { alpha: false, willReadFrequently: true })
-  if (!context) return null
-
-  context.drawImage(bitmap, 0, 0, width, height)
-  const detected = findReceiptBounds(context.getImageData(0, 0, width, height).data, width, height)
-  if (!detected) return null
-
-  const marginX = Math.round(detected.width * 0.08)
-  const marginY = Math.round(detected.height * 0.06)
-  const scaleBack = 1 / detectionScale
-  const sourceX = Math.max(0, detected.x - marginX)
-  const sourceY = Math.max(0, detected.y - marginY)
-  const sourceMaxX = Math.min(width, detected.x + detected.width + marginX)
-  const sourceMaxY = Math.min(height, detected.y + detected.height + marginY)
-
-  return {
-    x: Math.round(sourceX * scaleBack),
-    y: Math.round(sourceY * scaleBack),
-    width: Math.round((sourceMaxX - sourceX) * scaleBack),
-    height: Math.round((sourceMaxY - sourceY) * scaleBack),
-  }
-}
-
-interface OptimizedImage { image: OcrImage; blockImage: OcrImage; receiptWasCropped: boolean }
+interface OptimizedImage { image: OcrImage; blockImage: OcrImage }
 
 async function optimizeImage(image: OcrImage): Promise<OptimizedImage> {
-  if (typeof createImageBitmap !== 'function') return { image, blockImage: image, receiptWasCropped: false }
+  if (typeof createImageBitmap !== 'function') return { image, blockImage: image }
 
   const bitmap = await createImageBitmap(image)
-  const detectedBounds = detectReceiptBounds(bitmap)
-  const bounds = detectedBounds ?? { x: 0, y: 0, width: bitmap.width, height: bitmap.height }
+  const bounds = { x: 0, y: 0, width: bitmap.width, height: bitmap.height }
   const longestSide = Math.max(bounds.width, bounds.height)
-
-  const minimumScale = bounds.width !== bitmap.width || bounds.height !== bitmap.height
-    ? Math.max(1, MIN_RECEIPT_SIDE / longestSide)
-    : 1
-  const scale = Math.min(minimumScale, MAX_UPLOAD_SIDE / longestSide)
+  const scale = Math.min(1, MAX_UPLOAD_SIDE / longestSide)
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bounds.width * scale)
   canvas.height = Math.round(bounds.height * scale)
@@ -199,7 +162,7 @@ async function optimizeImage(image: OcrImage): Promise<OptimizedImage> {
   const context = canvas.getContext('2d', { alpha: false })
   if (!context) {
     bitmap.close()
-    return { image, blockImage: image, receiptWasCropped: false }
+    return { image, blockImage: image }
   }
 
   const blockCanvas = document.createElement('canvas')
@@ -209,18 +172,18 @@ async function optimizeImage(image: OcrImage): Promise<OptimizedImage> {
 
   context.imageSmoothingEnabled = scale <= 1
   context.imageSmoothingQuality = 'high'
-  context.filter = 'grayscale(1) contrast(1.45)'
+  context.filter = 'grayscale(1) contrast(1.25)'
   context.drawImage(bitmap, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, canvas.width, canvas.height)
 
   if (blockContext) {
     blockContext.imageSmoothingEnabled = scale <= 1
     blockContext.imageSmoothingQuality = 'high'
-    blockContext.filter = 'grayscale(1) contrast(1.9) brightness(1.08)'
+    blockContext.filter = 'grayscale(1) contrast(1.6) brightness(1.05)'
     blockContext.drawImage(bitmap, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, blockCanvas.width, blockCanvas.height)
   }
 
   bitmap.close()
-  return { image: canvas, blockImage: blockContext ? blockCanvas : canvas, receiptWasCropped: detectedBounds !== null }
+  return { image: canvas, blockImage: blockContext ? blockCanvas : canvas }
 }
 
 /** Avvia in anticipo il motore OCR e riusa lo stesso worker tra scansioni. */
@@ -242,7 +205,7 @@ export async function recognizeImage(imageSource: OcrImage, onProgress: Progress
     const looksLikeReceipt = /documento|scontrino|ricevuta|\biva\b|prezzo|totale|pagamento\W*cont|importo\W*pag/i.test(sparseText)
     const containsAmount = /(?:€\s*\d|\d\s*(?:[,.\s:]\s*\d{1,2})?\s*(?:€|EUR)|(?:totale|importo|pagamento|prezzo)[^\n\d]{0,24}\d)/i.test(sparseText)
 
-    if (!looksLikeReceipt && !optimized.receiptWasCropped && containsAmount) {
+    if (!looksLikeReceipt && containsAmount) {
       onProgress(100)
       return sparseText
     }

@@ -284,6 +284,51 @@ describe('parseOcrText', () => {
     expect(rows[0]).toMatchObject({ amount: '5.00', category: 'Spesa' })
   })
 
+  it('keeps the richer sparse pass for a multi-transaction screenshot', () => {
+    const sparseText = `
+      03 NOV 2026
+      PAGAMENTO POS AMAZON
+      - 18,40 €
+      02 NOV 2026
+      PAGAMENTO POS CONAD
+      - 27,15 €
+    `
+    const blockText = `
+      03 NOV 2026
+      PAGAMENTO POS AMAZON
+      - 18,40 €
+    `
+
+    const rows = parseOcrText(`${sparseText}${OCR_VARIANT_SEPARATOR}${blockText}`)
+
+    expect(rows).toHaveLength(2)
+    expect(rows.map((row) => row.amount)).toEqual(['18.40', '27.15'])
+  })
+
+  it('uses a labelled payment when OCR misses the total label', () => {
+    const rows = parseOcrText(`
+      DOCUMENTO COMMERCIALE
+      PANE 1,20
+      LATTE 2,30
+      PAGAMENTO 3,50
+      IVA 0,19
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '3.50', type: 'expense' })
+  })
+
+  it('repairs a spaced decimal on a monetary line', () => {
+    const rows = parseOcrText(`
+      RICEVUTA
+      TOTALE 18 60
+      IVA 1,69
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '18.60', type: 'expense' })
+  })
+
   it('rejects an isolated VAT value returned by the receipt-specific pass', () => {
     const sparseText = `
       CASEIFICIO LA GRAZIA
