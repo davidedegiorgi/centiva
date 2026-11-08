@@ -329,6 +329,49 @@ describe('parseOcrText', () => {
     expect(rows[0]).toMatchObject({ amount: '18.60', type: 'expense' })
   })
 
+  it('recognizes Somma as the total label on a scale receipt', () => {
+    const rows = parseOcrText(`
+      CASEIFICIO LA GRAZIA
+      Bilancia 1
+      Ricotta capra
+      2Voce Somma € 9,85
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '9.85', category: 'Spesa' })
+  })
+
+  it('reconstructs a scale receipt total when the large printed digits are distorted', () => {
+    const sparseText = `
+      CASEIFICIO LA GRAZIA
+      Bilancia 1
+      kg Tara kg €/kg €
+      Ricotta capra
+      0,426
+      11,90
+      9,07
+      Impost. prezzo unit.
+      0,240
+      19,90
+      4,18
+      2Voce Somma
+      €
+      909
+    `
+    const blockText = `
+      CASEIFICIO LA GRAZIA
+      Bilancia 1
+      Ricotta capra
+      0,426 5,07
+      2Voce Somma € 3,89
+    `
+
+    const rows = parseOcrText(`${sparseText}${OCR_VARIANT_SEPARATOR}${blockText}`)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '9.85', category: 'Spesa' })
+  })
+
   it('rejects an isolated VAT value returned by the receipt-specific pass', () => {
     const sparseText = `
       CASEIFICIO LA GRAZIA

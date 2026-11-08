@@ -332,7 +332,7 @@ function isReceiptText(lines: string[]): boolean {
   const signedAmounts = candidates.filter((candidate) => /[+-]/.test(candidate.raw)).length
   const dates = lines.filter((line) => dateIn(line)).length
   const hasStrongReceiptSignal = /scontrino|ricevuta|documento commerciale|partita\s+iva|p\.?\s*iva|imponibile|subtotale|\biva\b|\bresto\b/i.test(text)
-  const hasExplicitTotal = /totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|importo\s+(?:pagato|dovuto)/i.test(text)
+  const hasExplicitTotal = /totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|\bsomma\b|importo\s+(?:pagato|dovuto)/i.test(text)
   const hasBankMovementSignal = /pagamento\s+(?:pos|e-?commerce)|bonifico|accredito|prelievo|operazione\s+carta|carte\s+postepay/i.test(text)
   const hasReceiptStructure = candidates.length >= 2 && signedAmounts <= 1 && dates <= 1 && !hasBankMovementSignal
 
@@ -356,7 +356,7 @@ function receiptScore(line: string, candidate: AmountCandidate): number {
 
   if (/\b(?:iva|imposta|imponibile|subtotale|resto|sconto|risparmio|acconto|commissione|aliquota|di\s+cui|numero|codice|transazione|terminale|autorizzazione|lotteria|matricola)\b[^\d]*$/i.test(prefix)) {
     score -= 120
-  } else if (/(?:totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|importo\s+(?:pagato|dovuto)|da\s+pagare)[^\d]*$/i.test(prefix)) {
+  } else if (/(?:totale(?:\s+(?:da\s+pagare|complessivo|dovuto|documento))?|\bsomma|importo\s+(?:pagato|dovuto)|da\s+pagare)[^\d]*$/i.test(prefix)) {
     score += 140
   } else if (/\btotale[^\d]*$/i.test(prefix)) {
     score += 100
@@ -460,7 +460,7 @@ function parseSingleOcrText(text: string): ImportDraft[] {
 
   if (dated.length > 0) return dated
 
-  const totalLine = [...lines].reverse().find((line) => /totale|total|importo/i.test(line) && findAmounts(line).length > 0)
+  const totalLine = [...lines].reverse().find((line) => /totale|total|somma|importo/i.test(line) && findAmounts(line).length > 0)
   const fallbackLine = totalLine ?? [...lines].reverse().find((line) => findAmounts(line).length > 0)
   if (!fallbackLine) return []
 
@@ -481,6 +481,46 @@ function parseSingleOcrText(text: string): ImportDraft[] {
   }]
 }
 
+function weightedReceiptTotal(variants: string[]): number | null {
+  let bestItemCount = 0
+  let bestTotal: number | null = null
+
+  for (const variant of variants) {
+    if (!/(?:bilancia|€\s*\/\s*kg|euro\s*\/\s*kg)/i.test(variant)) continue
+
+    const weights = [...variant.matchAll(/\b(\d{1,3}[,.]\d{3})\b/g)]
+    const itemTotals: number[] = []
+
+    weights.forEach((weightMatch, index) => {
+      const weight = parseAmount(weightMatch[1])
+      if (weight === null || weight <= 0 || weight >= 10) return
+
+      const start = (weightMatch.index ?? 0) + weightMatch[0].length
+      const end = weights[index + 1]?.index ?? variant.length
+      const following = variant.slice(start, end)
+      const values = [...following.matchAll(/\b(\d{1,5}[,.]\d{2})\b/g)]
+        .map((match) => parseAmount(match[1]))
+        .filter((value): value is number => value !== null && value > 0)
+
+      if (values.length < 2) return
+      const unitPrice = values[0]
+      const shownLineTotal = values[1]
+      if (unitPrice < shownLineTotal || unitPrice > 1000) return
+
+      itemTotals.push(Math.round(weight * unitPrice * 100) / 100)
+    })
+
+    if (itemTotals.length < 2) continue
+    const total = Math.round(itemTotals.reduce((sum, value) => sum + value, 0) * 100) / 100
+    if (itemTotals.length > bestItemCount) {
+      bestItemCount = itemTotals.length
+      bestTotal = total
+    }
+  }
+
+  return bestTotal
+}
+
 export function parseOcrText(text: string): ImportDraft[] {
   const variants = text
     .split(OCR_VARIANT_SEPARATOR)
@@ -494,7 +534,7 @@ export function parseOcrText(text: string): ImportDraft[] {
     .flatMap((line) => amountCandidates(line).map((candidate) => Math.abs(candidate.value).toFixed(2)))))
   const confirmedAmounts = new Set(variants.flatMap((variant) => variant
     .split(/\r?\n/)
-    .filter((line) => /totale|da\s+pagare|importo\W*pag|pagamento\W*(?:carta|contante|bancomat|pos)/i.test(normalizeReceiptLabels(line)))
+    .filter((line) => /totale|somma|da\s+pagare|importo\W*pag|pagamento\W*(?:carta|contante|bancomat|pos)/i.test(normalizeReceiptLabels(line)))
     .flatMap((line) => amountCandidates(line).map((candidate) => Math.abs(candidate.value).toFixed(2)))))
   const safeVariants = parsedVariants.map((rows) => rows.filter((row) => (
     !taxAmounts.has(Number(row.amount).toFixed(2))
@@ -504,9 +544,11 @@ export function parseOcrText(text: string): ImportDraft[] {
   const selectedRows = receiptLike
     ? [...safeVariants].reverse().find((rows) => rows.length > 0) ?? []
     : safeVariants.reduce<ImportDraft[]>((best, rows) => rows.length > best.length ? rows : best, [])
+  const calculatedWeightedTotal = receiptLike ? weightedReceiptTotal(variants) : null
 
   return selectedRows.map((row) => ({
     ...row,
+    amount: calculatedWeightedTotal === null ? row.amount : calculatedWeightedTotal.toFixed(2),
     category: (() => {
       const suggested = suggestCategory(combinedText, row.type)
       return suggested === 'Altro' && receiptLike ? 'Acquisti' : suggested

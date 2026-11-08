@@ -202,7 +202,7 @@ export async function recognizeImage(imageSource: OcrImage, onProgress: Progress
     await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT })
     const sparseResult = await worker.recognize(optimized.image, {}, { text: true })
     const sparseText = sparseResult.data.text
-    const looksLikeReceipt = /documento|scontrino|ricevuta|\biva\b|prezzo|totale|pagamento\W*cont|importo\W*pag/i.test(sparseText)
+    const looksLikeReceipt = /documento|scontrino|ricevuta|\biva\b|prezzo|totale|somma|pagamento\W*cont|importo\W*pag/i.test(sparseText)
     const containsAmount = /(?:€\s*\d|\d\s*(?:[,.\s:]\s*\d{1,2})?\s*(?:€|EUR)|(?:totale|importo|pagamento|prezzo)[^\n\d]{0,24}\d)/i.test(sparseText)
 
     if (!looksLikeReceipt && containsAmount) {
