@@ -204,28 +204,11 @@ export function MobileCapturePage() {
       })
 
       const delta = pendingScan.type === 'income' ? pendingScan.amount : -pendingScan.amount
-      const today = new Date()
-      const scannedDate = new Date(`${pendingScan.occurred_on}T00:00:00`)
-      const affectsCurrentSummary = pendingScan.currency === 'EUR'
-        && scannedDate.getFullYear() === today.getFullYear()
-        && scannedDate.getMonth() === today.getMonth()
-
-      try {
-        const { data } = await dashboardApi.show('EUR')
-        setMonthlySavings(Number(data.summary.net_savings))
-        setIncome(Number(data.summary.income))
-        setExpenses(Number(data.summary.expenses))
-      } catch {
-        if (affectsCurrentSummary) {
-          setMonthlySavings((current) => current + delta)
-          if (pendingScan.type === 'income') setIncome((current) => current + pendingScan.amount)
-          else setExpenses((current) => current + pendingScan.amount)
-        }
-      }
-      if (affectsCurrentSummary) {
-        setSavingsEffect({ delta, key: Date.now() })
-        window.setTimeout(() => setSavingsEffect(null), 1800)
-      }
+      setMonthlySavings((current) => current + delta)
+      if (pendingScan.type === 'income') setIncome((current) => current + pendingScan.amount)
+      else setExpenses((current) => current + pendingScan.amount)
+      setSavingsEffect({ delta, key: Date.now() })
+      window.setTimeout(() => setSavingsEffect(null), 1800)
       setPendingScans((current) => current.slice(1))
       window.dispatchEvent(new CustomEvent('centiva:transactions-changed'))
     } catch (caught) {
