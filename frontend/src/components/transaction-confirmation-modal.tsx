@@ -43,7 +43,7 @@ export function TransactionConfirmationModal({
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">{eyebrow}</p>
-            <h2 id={`${id}-title`} className="mt-1 text-xl font-semibold">Conferma i dati riconosciuti</h2>
+            <h2 id={`${id}-title`} className="mt-1 text-xl font-semibold">Conferma movimento</h2>
             {sourceText && <p className="mt-2 text-sm text-muted-foreground">{sourceText}</p>}
           </div>
           <Button variant="ghost" size="icon" type="button" onClick={onCancel} aria-label="Chiudi"><X /></Button>
