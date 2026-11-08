@@ -248,10 +248,10 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
             Centiva
           </p>
           <h1 className="mt-5 text-5xl font-semibold leading-[1.08] tracking-[-0.04em]">
-            Le tue finanze, più chiare.
+            INcentiva il tuo mese.
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-8 text-white/65">
-            Registra entrate e uscite in pochi secondi.
+            Tieni sotto controllo entrate, uscite e risultato mensile.
           </p>
         </div>
       </section>
