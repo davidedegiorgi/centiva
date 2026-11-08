@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck } from 'lucide-react'
 
 import { BrandLogo } from '@/components/brand-logo'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -239,27 +239,21 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
 
   return (
     <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(480px,0.78fr)]">
-      <section className="relative hidden overflow-hidden border-r border-white/10 bg-[#090a09] p-12 text-white shadow-[inset_-120px_-80px_180px_rgba(0,0,0,0.78),inset_1px_0_rgba(255,255,255,0.05)] lg:flex lg:flex-col lg:justify-between">
+      <section className="relative hidden overflow-hidden border-r border-white/10 bg-[#090a09] p-12 text-white shadow-[inset_-120px_-80px_180px_rgba(0,0,0,0.78),inset_1px_0_rgba(255,255,255,0.05)] lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 size-80 rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="absolute bottom-24 left-24 size-2 rounded-full bg-emerald-300 shadow-[0_0_60px_20px_rgba(52,211,153,0.25)]" />
         <BrandLogo className="relative h-10 w-auto drop-shadow-[0_0_24px_rgba(165,243,207,0.2)]" />
 
-        <div className="relative max-w-xl">
+        <div className="relative my-auto max-w-xl">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300">
-            Chiarezza finanziaria
+            Centiva
           </p>
           <h1 className="mt-5 text-5xl font-semibold leading-[1.08] tracking-[-0.04em]">
-            Ogni centesimo racconta una storia.
+            Le tue finanze, più chiare.
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-8 text-white/65">
-            Centiva trasforma ricevute, screenshot e movimenti in decisioni
-            semplici e consapevoli.
+            Registra entrate e uscite in pochi secondi.
           </p>
-        </div>
-
-        <div className="relative flex items-center gap-3 text-sm text-white/60">
-          <Sparkles className="size-5 text-emerald-300" aria-hidden="true" />
-          Meno tempo sui conti, più spazio per i tuoi obiettivi.
         </div>
       </section>
 
