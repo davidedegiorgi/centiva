@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
-  ArrowDownLeft, ArrowRight, ArrowUpRight, ChevronDown, FileUp, Lightbulb,
+  ArrowDownLeft, ArrowUpRight, ChevronDown, FileUp, Lightbulb,
   LoaderCircle, Tags, TrendingDown, TrendingUp,
 } from 'lucide-react'
 import {
@@ -36,10 +36,9 @@ function ChartUnavailable({ children }: { children: ReactNode }) {
 
 interface DashboardPageProps {
   onOpenImport: () => void
-  onOpenInsights: () => void
 }
 
-export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPageProps) {
+export function DashboardPage({ onOpenImport }: DashboardPageProps) {
   const [currency, setCurrency] = useState('EUR')
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [error, setError] = useState<ApiError | null>(null)
@@ -98,9 +97,8 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
 
       {error && <Alert variant="destructive"><AlertTitle>Aggiornamento non riuscito</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>}
 
-      <section className="group relative isolate overflow-hidden border-y border-white/10 py-9 sm:py-14" aria-label="Risultato del mese">
+      <section className="group relative isolate overflow-hidden py-9 sm:py-14" aria-label="Risultato del mese">
         <div className="pointer-events-none absolute left-[12%] top-1/2 -z-10 size-44 -translate-y-1/2 rounded-full bg-emerald-400/15 blur-[90px] transition-[transform,opacity] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-150 group-hover:opacity-80 sm:size-64" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-px bg-white/10" aria-hidden="true" />
         <div className="flex flex-col gap-5 sm:gap-7">
           <p className="font-data text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-emerald-300">Risultato del mese</p>
           <LiquidNumber className="dashboard-result-number block whitespace-nowrap text-[clamp(2.8rem,10vw,8.5rem)] font-black leading-[0.82] tracking-[-0.075em] text-white drop-shadow-[0_10px_34px_rgba(255,255,255,0.12)] transition-[letter-spacing,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1 group-hover:tracking-[-0.055em]" value={dashboard.summary.net_savings} currency={dashboard.currency} />
@@ -131,7 +129,7 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
           <ChevronDown className={`size-5 shrink-0 text-muted-foreground transition-transform ${isImportGuideExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
         </button>
         {isImportGuideExpanded && <div className="grid border-t border-white/10 lg:grid-cols-[1.1fr_1fr]">
-          <div className="p-5 sm:p-6"><h2 className="text-xl font-semibold tracking-tight">Trasforma un documento in transazioni</h2><div className="mt-5 flex flex-wrap gap-3"><Button className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300" onClick={onOpenImport}><FileUp /> Carica un documento</Button><Button className="border-white/20 bg-white/5 text-white hover:bg-white/10" variant="outline" onClick={onOpenInsights}><Lightbulb /> Apri Insights</Button></div></div>
+          <div className="p-5 sm:p-6"><h2 className="text-xl font-semibold tracking-tight">Trasforma un documento in transazioni</h2><div className="mt-5 flex flex-wrap gap-3"><Button className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300" onClick={onOpenImport}><FileUp /> Carica un documento</Button></div></div>
           <div className="grid gap-px bg-white/10 sm:grid-cols-3 lg:grid-cols-1"><div className="flex gap-3 bg-black/20 p-4"><FileUp className="size-5 shrink-0 text-emerald-300" /><div><p className="font-medium">1. Carica</p><p className="mt-1 text-xs text-white/55">Immagine o CSV</p></div></div><div className="flex gap-3 bg-black/20 p-4"><Tags className="size-5 shrink-0 text-emerald-300" /><div><p className="font-medium">2. Controlla</p><p className="mt-1 text-xs text-white/55">Dati e categorie</p></div></div><div className="flex gap-3 bg-black/20 p-4"><Lightbulb className="size-5 shrink-0 text-emerald-300" /><div><p className="font-medium">3. Salva</p><p className="mt-1 text-xs text-white/55">Solo dopo la revisione</p></div></div></div>
         </div>}
       </section>
@@ -148,8 +146,6 @@ export function DashboardPage({ onOpenImport, onOpenInsights }: DashboardPagePro
       <Card className="border-white/10 bg-card"><CardHeader><CardTitle>Confronto con i mesi precedenti</CardTitle></CardHeader><CardContent>
         {activeComparisonMonths < 2 ? <ChartUnavailable>Il confronto sarà disponibile quando ci saranno movimenti in almeno 2 mesi.</ChartUnavailable> : <div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyComparisonData} margin={{ left: -10, right: 10, top: 10 }}><CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#27272a" /><XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} /><YAxis axisLine={false} tickLine={false} fontSize={12} /><Tooltip formatter={(value) => money(Number(value), dashboard.currency)} /><Area type="monotone" dataKey="income" name="Entrate" stroke="#10b981" fill="transparent" strokeWidth={2} /><Area type="monotone" dataKey="expenses" name="Uscite" stroke="#a1a1aa" fill="transparent" strokeWidth={2} /><Area type="monotone" dataKey="netSavings" name="Risultato del mese" stroke="#d97706" fill="transparent" strokeWidth={2} /></AreaChart></ResponsiveContainer></div>}
       </CardContent></Card>
-
-      <Button className="self-start text-emerald-200" variant="ghost" onClick={onOpenInsights}>Apri Centiva Insights <ArrowRight /></Button>
     </main>
   )
 }

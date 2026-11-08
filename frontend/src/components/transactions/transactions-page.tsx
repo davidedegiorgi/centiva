@@ -229,9 +229,6 @@ export function TransactionsPage() {
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Transazioni
           </h1>
-          <p className="mt-2 text-muted-foreground">
-            Registra e ritrova entrate e uscite in un unico posto.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <VoiceCommandButton placement="transactions" onSaved={handleVoiceSaved} />

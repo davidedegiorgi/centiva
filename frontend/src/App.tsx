@@ -150,7 +150,6 @@ function App() {
         ) : activeView === 'dashboard' ? (
           <DashboardPage
             onOpenImport={() => changeView('import')}
-            onOpenInsights={() => changeView('analysis')}
           />
         ) : activeView === 'transactions' ? (
           <TransactionsPage />
