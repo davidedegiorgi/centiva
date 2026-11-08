@@ -241,7 +241,6 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
     <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(480px,0.78fr)]">
       <section className="relative hidden overflow-hidden border-r border-white/10 bg-[#090a09] p-12 text-white shadow-[inset_-120px_-80px_180px_rgba(0,0,0,0.78),inset_1px_0_rgba(255,255,255,0.05)] lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 size-80 rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="absolute bottom-24 left-24 size-2 rounded-full bg-emerald-300 shadow-[0_0_60px_20px_rgba(52,211,153,0.25)]" />
         <BrandLogo className="relative h-10 w-auto drop-shadow-[0_0_24px_rgba(165,243,207,0.2)]" />
 
         <div className="relative my-auto max-w-xl">
