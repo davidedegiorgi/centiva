@@ -16,8 +16,6 @@ const BUDGET_CATEGORIES = [
   'Trasporti', 'Utenze', 'Viaggi', 'Altro',
 ]
 
-const confidenceLabel = { low: 'iniziale', medium: 'media', high: 'alta' }
-
 function money(value: string | number, currency: string) {
   return new Intl.NumberFormat('it-IT', { style: 'currency', currency }).format(Number(value))
 }
@@ -126,7 +124,6 @@ export function PlanningPage() {
           <div className="border-t border-white/10 py-4"><RefreshCw className="mb-3 size-5 text-emerald-300" /><p className="text-xs text-emerald-100">Media netta giornaliera</p><p className="financial-value mt-2 text-lg font-semibold">{money(data.future_balance.average_daily_net, data.currency)}</p></div>
           <div className="border-t border-white/10 py-4"><CalendarClock className="mb-3 size-5 text-emerald-300" /><p className="text-xs text-emerald-100">Giorni rimanenti</p><p className="financial-value mt-2 text-lg font-semibold">{data.future_balance.days_remaining}</p></div>
         </CardContent>
-        <div className="border-t border-white/10 px-6 py-4 text-xs text-emerald-100">Attendibilità {confidenceLabel[data.future_balance.confidence]} · {data.future_balance.sample_size} movimenti recenti. È una stima, non una garanzia.</div>
       </Card>
     </div>}
 
