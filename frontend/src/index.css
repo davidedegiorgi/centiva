@@ -203,21 +203,6 @@
   min-height: 100vh;
 }
 
-.webgl-field {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.webgl-field-static {
-  background:
-    radial-gradient(circle at 22% 28%, rgb(16 185 129 / 0.1), transparent 24%),
-    radial-gradient(circle at 76% 68%, rgb(228 228 231 / 0.07), transparent 20%),
-    linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.018) 50%, transparent 65%);
-}
-
 .museum-cursor {
   position: fixed;
   top: 0;
@@ -282,10 +267,12 @@
   font-size: 0.68rem;
 }
 
-.receipt-monolith {
+.receipt-preview {
   position: relative;
+  display: grid;
   height: min(68vh, 620px);
   min-height: 420px;
+  place-items: center;
   overflow: hidden;
   border: 1px solid rgb(228 228 231 / 0.12);
   border-radius: 2px;
@@ -293,38 +280,7 @@
   box-shadow: inset 0 1px rgb(255 255 255 / 0.08), 0 48px 120px -55px rgb(0 0 0 / 0.95);
 }
 
-.kinetic-title {
-  width: 100%;
-  height: clamp(120px, 20vw, 260px);
-}
-
-.kinetic-title-static {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  place-items: center;
-  overflow: hidden;
-  color: rgb(244 244 240 / 0.92);
-  font-family: 'Syne Variable', sans-serif;
-  font-size: clamp(2.6rem, 8.8vw, 8.2rem);
-  font-weight: 900;
-  line-height: 0.86;
-  letter-spacing: -0.08em;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.receipt-monolith-static {
-  position: relative;
-  display: grid;
-  width: 100%;
-  height: 100%;
-  place-items: center;
-  overflow: hidden;
-  background: #0a0a0c;
-}
-
-.receipt-monolith-static img {
+.receipt-preview img {
   width: min(72%, 440px);
   height: 88%;
   object-fit: contain;
@@ -333,7 +289,7 @@
   box-shadow: 0 32px 80px -36px rgb(0 0 0 / 0.95);
 }
 
-.receipt-static-scan {
+.receipt-preview-scan {
   position: absolute;
   inset-inline: 12%;
   top: 18%;
@@ -353,14 +309,14 @@
   filter: none;
 }
 
-.receipt-reveal .receipt-monolith {
+.receipt-reveal .receipt-preview {
   height: 100vh;
   border: 0;
 }
 
 @keyframes receipt-camera-reveal {
-  from { opacity: 0; transform: perspective(1400px) translate3d(0, 8vh, -180px) rotateX(3deg) scale(0.9); filter: blur(12px); }
-  to { opacity: 1; transform: perspective(1400px) translate3d(0, 0, 0) rotateX(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(24px) scale(0.98); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 @keyframes receipt-static-scanning {
@@ -401,7 +357,6 @@
 
 .view-stage {
   position: relative;
-  perspective: 1400px;
   animation: centiva-view-enter 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -438,27 +393,27 @@
 }
 
 @keyframes centiva-view-enter {
-  from { opacity: 0; transform: translate3d(0, 28px, -70px) rotateX(2deg); filter: blur(12px); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) rotateX(0); filter: blur(0); }
+  from { opacity: 0; transform: translateY(28px); filter: blur(12px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
 @keyframes centiva-card-materialize {
-  from { opacity: 0; transform: translate3d(0, 22px, -45px) scale(0.975); filter: blur(8px); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(22px) scale(0.975); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 @keyframes centiva-node {
-  0% { opacity: 0; transform: translate3d(0, 24px, 0) scale(0); }
-  28% { opacity: 1; transform: translate3d(18px, 0, 0) scale(1); }
-  100% { opacity: 0; transform: translate3d(80px, -34px, 0) scale(0.25); }
+  0% { opacity: 0; transform: translate(0, 24px) scale(0); }
+  28% { opacity: 1; transform: translate(18px, 0) scale(1); }
+  100% { opacity: 0; transform: translate(80px, -34px) scale(0.25); }
 }
 
 @keyframes centiva-view-old {
-  to { opacity: 0; transform: translate3d(-2%, 0, -80px) scale(0.985); filter: blur(10px); }
+  to { opacity: 0; transform: translateX(-2%) scale(0.985); filter: blur(10px); }
 }
 
 @keyframes centiva-view-new {
-  from { opacity: 0; transform: translate3d(3%, 18px, -80px) scale(0.985); filter: blur(12px); }
+  from { opacity: 0; transform: translate(3%, 18px) scale(0.985); filter: blur(12px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

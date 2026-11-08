@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ReceiptMonolith } from '@/components/effects/receipt-monolith'
+import { ReceiptPreview } from '@/components/effects/receipt-preview'
 import { ApiError, transactionApi } from '@/lib/api'
 import { IMPORT_CATEGORIES, parseCsv, parseOcrText, suggestCategory } from '@/lib/import-parser'
 import { recognizeImage, warmOcr } from '@/lib/ocr'
@@ -33,7 +33,7 @@ export function ImportPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [ocrText, setOcrText] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [isMonolithExpanded, setIsMonolithExpanded] = useState(false)
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -50,11 +50,11 @@ export function ImportPage() {
   }, [imagePreview])
 
   useEffect(() => {
-    if (!isMonolithExpanded) return
+    if (!isPreviewExpanded) return
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = previous }
-  }, [isMonolithExpanded])
+  }, [isPreviewExpanded])
 
   function update(id: string, field: keyof ImportDraft, value: string) {
     setDrafts((current) => current.map((draft) => draft.id === id ? { ...draft, [field]: value } : draft))
@@ -177,22 +177,22 @@ export function ImportPage() {
         </CardContent>
       </Card>
 
-      {imagePreview && <section className={`${isMonolithExpanded ? 'receipt-reveal fixed inset-0 z-50 m-0' : 'relative mt-8'} grid items-stretch gap-0 border-y border-white/10 bg-[#0a0a0c] lg:grid-cols-[0.42fr_1fr]`}>
-        <Button className="absolute right-4 top-4 z-20 border-white/15 bg-black/50 text-white backdrop-blur hover:bg-white/10" variant="outline" size="icon" aria-label={isMonolithExpanded ? 'Riduci anteprima' : 'Espandi anteprima'} data-cursor-label={isMonolithExpanded ? 'CLOSE' : 'ZOOM'} onClick={() => setIsMonolithExpanded((current) => !current)}>
-          {isMonolithExpanded ? <X /> : <Maximize2 />}
+      {imagePreview && <section className={`${isPreviewExpanded ? 'receipt-reveal fixed inset-0 z-50 m-0' : 'relative mt-8'} grid items-stretch gap-0 border-y border-white/10 bg-[#0a0a0c] lg:grid-cols-[0.42fr_1fr]`}>
+        <Button className="absolute right-4 top-4 z-20 border-white/15 bg-black/50 text-white backdrop-blur hover:bg-white/10" variant="outline" size="icon" aria-label={isPreviewExpanded ? 'Riduci anteprima' : 'Espandi anteprima'} data-cursor-label={isPreviewExpanded ? 'CLOSE' : 'ZOOM'} onClick={() => setIsPreviewExpanded((current) => !current)}>
+          {isPreviewExpanded ? <X /> : <Maximize2 />}
         </Button>
         <div className="flex flex-col justify-between border-b border-white/10 p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div>
-            <p className="font-data text-[0.65rem] uppercase tracking-[0.24em] text-emerald-400">Optical analysis / 01</p>
-            <h2 className="mt-5 text-3xl font-bold tracking-tighter">Receipt<br />Monolith</h2>
-            <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">La superficie viene letta attraverso una lente rifrattiva. Muovi il puntatore sul documento per ispezionare la scansione.</p>
+            <p className="font-data text-[0.65rem] uppercase tracking-[0.24em] text-emerald-400">Analisi documento</p>
+            <h2 className="mt-5 text-3xl font-bold tracking-tighter">Anteprima<br />scansione</h2>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">Controlla che il documento sia leggibile mentre Centiva estrae i dati.</p>
           </div>
           <div className="mt-10 border-t border-white/10 pt-5 font-data text-xs text-zinc-400">
             <div className="flex justify-between"><span>STATUS</span><span className={isReading ? 'text-amber-500' : 'text-emerald-400'}>{isReading ? 'SCANNING' : 'EXTRACTED'}</span></div>
             <div className="mt-3 flex justify-between"><span>OCR CONFIDENCE</span><span>{isReading ? `${progress}%` : 'REVIEW REQUIRED'}</span></div>
           </div>
         </div>
-        <ReceiptMonolith imageUrl={imagePreview} scanning={isReading} />
+        <ReceiptPreview imageUrl={imagePreview} scanning={isReading} />
       </section>}
 
       {error && <Alert variant="destructive" className="mt-5"><AlertCircle /><AlertTitle>Controlla l’importazione</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
