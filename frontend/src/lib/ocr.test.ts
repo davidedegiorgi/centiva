@@ -45,4 +45,19 @@ describe('findReceiptBounds', () => {
     const pixels = new Uint8ClampedArray(320 * 240 * 4).fill(35)
     expect(findReceiptBounds(pixels, 320, 240)).toBeNull()
   })
+
+  it('does not mistake a small square interface icon for a distant receipt', () => {
+    const pixels = new Uint8ClampedArray(320 * 240 * 4).fill(35)
+    for (let y = 104; y < 136; y += 1) {
+      for (let x = 144; x < 176; x += 1) {
+        const offset = (y * 320 + x) * 4
+        pixels[offset] = 245
+        pixels[offset + 1] = 245
+        pixels[offset + 2] = 245
+        pixels[offset + 3] = 255
+      }
+    }
+
+    expect(findReceiptBounds(pixels, 320, 240)).toBeNull()
+  })
 })

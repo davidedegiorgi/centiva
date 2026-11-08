@@ -239,7 +239,7 @@ const numericDatePattern = /\b\d{1,2}[/.,-]\d{1,2}[/.,-]\d{2,4}\b/i
 const textualDatePattern = /\b\d{1,2}\s+(?:gen(?:naio)?|feb(?:braio)?|mar(?:zo)?|apr(?:ile)?|mag(?:gio)?|giu(?:gno)?|lug(?:lio)?|ago(?:sto)?|set(?:t|tembre)?|ott(?:obre)?|nov(?:embre)?|dic(?:embre)?)(?:\s+\d{2,4})?\b/i
 const colonTimePattern = /\b(?:[01]?\d|2[0-3])[:;]\d{2}(?::\d{2})?\b/g
 const dotTimePattern = /\b(?:[01]?\d|2[0-3])[.]\d{2}\b/g
-const moneyPattern = /(?:€\s*)?[+-]?\s*\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})(?:\s*(?:€|EUR))?|(?:€\s*)?[+-]?\s*\d+(?:[.,]\d{2})(?:\s*(?:€|EUR))?/gi
+const moneyPattern = /(?:€\s*)?[+-]?\s*\d+(?:[.\s]\d{3})*(?:[.,:;]\d{1,2})(?:\s*(?:€|EUR))?|(?:€\s*)[+-]?\s*\d+|[+-]?\s*\d+\s*(?:€|EUR)/gi
 export const OCR_VARIANT_SEPARATOR = '\n<<<CENTIVA_OCR_VARIANT>>>\n'
 
 interface AmountCandidate { value: number; raw: string; index: number; score: number }
@@ -255,7 +255,11 @@ function dateIn(value: string): string | null {
 
 function amountCandidates(line: string): AmountCandidate[] {
   const date = dateIn(line)
-  let sanitized = date ? line.replace(date, ' '.repeat(date.length)) : line
+  const normalizedMoney = line
+    .replace(/(\d)\s+([0-9]{2})(?=\s*(?:€|EUR)(?:\s|$))/gi, '$1,$2')
+    .replace(/(€\s*\d+)\s+([0-9]{2})\b/gi, '$1,$2')
+    .replace(/(\d)[,.:;](\d)[)\]oO](?=\D|$)/g, '$1,$20')
+  let sanitized = date ? normalizedMoney.replace(date, ' '.repeat(date.length)) : normalizedMoney
   sanitized = sanitized.replace(colonTimePattern, (time) => ' '.repeat(time.length))
   sanitized = sanitized.replace(dotTimePattern, (time, offset: number) => {
     const nearby = sanitized.slice(Math.max(0, offset - 5), offset + time.length + 6)
@@ -265,7 +269,7 @@ function amountCandidates(line: string): AmountCandidate[] {
 
   return [...sanitized.matchAll(moneyPattern)].flatMap((match): AmountCandidate[] => {
     const raw = match[0]
-    const value = parseAmount(raw)
+    const value = parseAmount(raw.replace(/[:;]/g, ','))
     if (value === null) return []
     const index = match.index ?? 0
     const context = sanitized.slice(Math.max(0, index - 12), index + raw.length + 12)

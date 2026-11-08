@@ -312,6 +312,28 @@ describe('parseOcrText', () => {
     expect(rows[0]).toMatchObject({ amount: '0.19' })
   })
 
+  it('recognizes an amount when OCR replaces the decimal separator with a space', () => {
+    const rows = parseOcrText(`
+      SUPERMERCATO CONAD
+      DOCUMENTO COMMERCIALE
+      TOTALE DA PAGARE 18 60 €
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '18.60', category: 'Spesa' })
+  })
+
+  it('recognizes an integer total followed by the currency', () => {
+    const rows = parseOcrText(`
+      NEGOZIO CENTRALE
+      DOCUMENTO COMMERCIALE
+      IMPORTO PAGATO 25 EUR
+    `)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: '25.00', category: 'Acquisti' })
+  })
+
   it('extracts every movement grouped below an Oggi heading', () => {
     const today = new Date()
     const expectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`

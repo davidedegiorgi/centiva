@@ -35,6 +35,9 @@ function getWorker() {
         // I dizionari non servono per importi, date e codici esercente e rallentano l'avvio.
         load_system_dawg: '0',
         load_freq_dawg: '0',
+        load_unambig_dawg: '0',
+        load_punc_dawg: '0',
+        load_bigram_dawg: '0',
       },
     ).then(async (worker) => {
       await worker.setParameters({
@@ -123,7 +126,7 @@ export function findReceiptBounds(pixels: Uint8ClampedArray, width: number, heig
     const centerX = (minX + maxX) / 2 / width
     const centerY = (minY + maxY) / 2 / height
     const centerDistance = Math.hypot(centerX - 0.5, centerY - 0.5)
-    const isTinyCandidate = areaRatio < 0.008
+    const isTinyCandidate = areaRatio < 0.015
     if (
       count < width * height * 0.0008
       || areaRatio < 0.002
@@ -133,7 +136,7 @@ export function findReceiptBounds(pixels: Uint8ClampedArray, width: number, heig
       || density < 0.28
       || aspectRatio < 0.14
       || aspectRatio > 4
-      || (isTinyCandidate && (density < 0.65 || aspectRatio < 0.25 || aspectRatio > 1.4 || centerDistance > 0.4))
+      || (isTinyCandidate && (density < 0.65 || aspectRatio < 0.2 || aspectRatio > 0.82 || centerDistance > 0.4))
     ) continue
 
     const score = count * density * (1 - Math.min(0.55, centerDistance))
@@ -237,8 +240,9 @@ export async function recognizeImage(imageSource: OcrImage, onProgress: Progress
     const sparseResult = await worker.recognize(optimized.image, {}, { text: true })
     const sparseText = sparseResult.data.text
     const looksLikeReceipt = /documento|scontrino|ricevuta|\biva\b|prezzo|totale|pagamento\W*cont|importo\W*pag/i.test(sparseText)
+    const containsAmount = /(?:€\s*\d|\d\s*(?:[,.\s:]\s*\d{1,2})?\s*(?:€|EUR)|(?:totale|importo|pagamento|prezzo)[^\n\d]{0,24}\d)/i.test(sparseText)
 
-    if (!looksLikeReceipt && !optimized.receiptWasCropped) {
+    if (!looksLikeReceipt && !optimized.receiptWasCropped && containsAmount) {
       onProgress(100)
       return sparseText
     }
