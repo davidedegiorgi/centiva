@@ -405,33 +405,3 @@ DB_PASSWORD=...
 ```
 
 Aggiungere inoltre le variabili Google e Brevo descritte nelle sezioni precedenti.
-
-## Deployment Docker alternativo
-
-Per eseguire l’intero stack su un unico server:
-
-```bash
-cp .env.production.example .env.production
-docker compose --env-file .env.production -f compose.production.yaml up -d --build
-```
-
-L’applicazione viene esposta sulla porta `8080` per impostazione predefinita. PostgreSQL rimane nella rete Docker privata.
-
-Aggiornamento:
-
-```bash
-docker compose --env-file .env.production -f compose.production.yaml up -d --build
-```
-
-Backup PostgreSQL:
-
-```bash
-docker compose --env-file .env.production -f compose.production.yaml exec -T postgres \
-  pg_dump -U centiva centiva > centiva-backup.sql
-```
-
-Conservare i backup in uno spazio protetto e cifrato.
-
-## Note sul codice legacy
-
-Il repository contiene ancora model, migration e test relativi ai precedenti obiettivi di risparmio. Queste funzioni non sono attualmente esposte nella navigazione dell’app e non fanno parte dell’esperienza utente corrente.
