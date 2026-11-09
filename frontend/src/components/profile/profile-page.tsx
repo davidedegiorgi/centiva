@@ -31,7 +31,6 @@ interface ProfilePageProps {
 
 export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePageProps) {
   const [name, setName] = useState(user.name)
-  const [email, setEmail] = useState(user.email)
   const [error, setError] = useState<ApiError | null>(null)
   const [success, setSuccess] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -46,7 +45,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
     setIsSaving(true)
 
     try {
-      const response = await authApi.updateProfile({ name, email })
+      const response = await authApi.updateProfile({ name })
       onUserChanged(response.data)
       setSuccess(true)
     } catch (caughtError) {
@@ -100,7 +99,7 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
             <UserRound className="size-5" aria-hidden="true" />
           </div>
           <CardTitle>Dati personali</CardTitle>
-          <CardDescription>Aggiorna nome e indirizzo email.</CardDescription>
+          <CardDescription>Aggiorna il nome associato al tuo account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="flex flex-col gap-5" onSubmit={handleSave}>
@@ -139,13 +138,11 @@ export function ProfilePage({ user, onUserChanged, onAccountDeleted }: ProfilePa
                 id="profile-email"
                 type="email"
                 autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                aria-invalid={Boolean(error?.errors.email)}
+                value={user.email}
+                readOnly
+                aria-readonly="true"
+                className="cursor-not-allowed text-muted-foreground"
               />
-              {error?.errors.email?.[0] && (
-                <p className="text-sm text-destructive">{error.errors.email[0]}</p>
-              )}
             </div>
 
             <Button

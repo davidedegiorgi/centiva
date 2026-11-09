@@ -45,47 +45,46 @@ class ProfileControllerTest extends TestCase
 
     public function test_valid_payload_updates_authenticated_user_profile(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email' => 'original@example.com']);
 
         $response = $this->actingAs($user)->patchJson('/api/v1/profile', [
             'name' => 'Nome Aggiornato',
-            'email' => 'aggiornato@example.com',
         ]);
 
         $response
             ->assertOk()
             ->assertJsonPath('data.name', 'Nome Aggiornato')
-            ->assertJsonPath('data.email', 'aggiornato@example.com');
+            ->assertJsonPath('data.email', 'original@example.com');
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'name' => 'Nome Aggiornato',
-            'email' => 'aggiornato@example.com',
+            'email' => 'original@example.com',
         ]);
     }
 
-    public function test_email_owned_by_another_user_returns_422_without_updating_profile(): void
+    public function test_email_cannot_be_changed_through_the_profile_endpoint(): void
     {
         $user = User::factory()->create([
             'name' => 'Mario Rossi',
             'email' => 'mario@example.com',
         ]);
-        User::factory()->create(['email' => 'existing@example.com']);
 
         $response = $this->actingAs($user)->patchJson('/api/v1/profile', [
-            'name' => 'Mario Rossi',
-            'email' => 'existing@example.com',
+            'name' => 'Nome Non Salvato',
+            'email' => 'nuova@example.com',
         ]);
 
         $response
             ->assertUnprocessable()
             ->assertJsonPath(
                 'errors.email.0',
-                'Esiste già un account con questo indirizzo email.',
+                "L'indirizzo email non può essere modificato.",
             );
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
+            'name' => 'Mario Rossi',
             'email' => 'mario@example.com',
         ]);
     }

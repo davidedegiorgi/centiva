@@ -51,7 +51,6 @@ export interface ResetPasswordPayload {
 
 export interface UpdateProfilePayload {
   name: string
-  email: string
 }
 
 export interface DeleteAccountPayload {
