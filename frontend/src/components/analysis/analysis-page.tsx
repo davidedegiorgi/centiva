@@ -114,7 +114,7 @@ export function AnalysisPage({ onOpenTransactions }: AnalysisPageProps) {
 
           <div className="grid gap-5 lg:grid-cols-3">
           <section className="space-y-4 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-foreground">Osservazioni motivate</h2>
+            <h2 className="text-lg font-semibold text-foreground">Osservazioni</h2>
             {insightStatus === 'insufficient' ? (
               <Card className="border-white/10 bg-card"><CardContent className="flex flex-col items-start gap-3 py-6"><div><h3 className="font-semibold text-foreground">Dati insufficienti per i suggerimenti</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">Servono almeno 3 spese categorizzate nel mese corrente. Al momento sono {categorizedExpenseCount}.</p></div><Button type="button" variant="outline" onClick={onOpenTransactions}><ListMinus /> Completa le categorie</Button></CardContent></Card>
             ) : data.insights.length === 0 ? (
