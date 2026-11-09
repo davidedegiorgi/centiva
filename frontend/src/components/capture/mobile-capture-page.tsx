@@ -261,7 +261,7 @@ export function MobileCapturePage() {
         <div className={`rounded-2xl border border-white/15 bg-black/45 px-4 py-3 backdrop-blur-xl transition-transform duration-700 ${savingsEffect ? 'scale-105 border-emerald-300/50' : ''}`}>
           <p className="font-data text-[0.6rem] uppercase tracking-[0.2em] text-white/55">Risultato del mese</p>
           <LiquidNumber value={monthlySavings} currency="EUR" className="mt-1 block text-2xl font-bold tracking-tighter" />
-          <div className="mt-2 flex gap-3 font-data text-[0.58rem] text-white/55">
+          <div className="mt-2 flex gap-3 font-numeric text-[0.58rem] text-white/55">
             <span className="text-emerald-300">+{income.toFixed(2)} €</span>
             <span className="text-rose-300">−{expenses.toFixed(2)} €</span>
           </div>
@@ -301,7 +301,7 @@ export function MobileCapturePage() {
         <div key={savingsEffect.key} className={`capture-balance-burst pointer-events-none fixed inset-0 z-[70] grid place-items-center ${savingsEffect.delta >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
           <div className="rounded-full border border-current/30 bg-black/75 px-8 py-5 text-center shadow-[0_0_80px_currentColor] backdrop-blur-xl">
             <Check className="mx-auto mb-2 size-7" />
-            <p className="font-data text-3xl font-bold">{savingsEffect.delta >= 0 ? '+' : '−'}{Math.abs(savingsEffect.delta).toFixed(2)} €</p>
+            <p className="font-numeric text-3xl font-bold">{savingsEffect.delta >= 0 ? '+' : '−'}{Math.abs(savingsEffect.delta).toFixed(2)} €</p>
             <p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/55">Risultato mensile aggiornato</p>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 @import "tw-animate-css";
 @import "@fontsource-variable/syne";
+@import "@fontsource-variable/jetbrains-mono";
 
 @keyframes capture-balance-burst {
   0% { opacity: 0; transform: scale(0.72); filter: blur(14px); }
@@ -15,7 +16,7 @@
 }
 
 .dashboard-result-number {
-  font-family: 'Syne Variable', sans-serif;
+  font-family: 'JetBrains Mono Variable', monospace;
   font-variant-numeric: tabular-nums slashed-zero;
 }
 
@@ -66,6 +67,11 @@
 
   button, input, select, textarea, h1, h2, h3, [data-slot='card-title'] {
     font-family: 'Syne Variable', sans-serif;
+  }
+
+  input[type='number'] {
+    font-family: 'JetBrains Mono Variable', monospace;
+    font-variant-numeric: tabular-nums slashed-zero;
   }
 
   h1, h2 {
@@ -241,7 +247,7 @@
 
 .liquid-number {
   display: inline-block;
-  font-family: 'Syne Variable', sans-serif;
+  font-family: 'JetBrains Mono Variable', monospace;
   font-variant-numeric: tabular-nums slashed-zero;
   letter-spacing: -0.07em;
   text-rendering: geometricPrecision;
@@ -252,16 +258,20 @@
   font-variant-numeric: tabular-nums slashed-zero;
 }
 
+.font-numeric,
 .financial-value {
-  font-family: 'Syne Variable', sans-serif;
+  font-family: 'JetBrains Mono Variable', monospace;
   font-variant-numeric: tabular-nums slashed-zero;
-  letter-spacing: -0.055em;
   text-rendering: geometricPrecision;
 }
 
-.recharts-cartesian-axis-tick-value,
-.recharts-tooltip-wrapper {
-  font-family: 'Syne Variable', sans-serif;
+.financial-value {
+  letter-spacing: -0.055em;
+}
+
+.recharts-yAxis .recharts-cartesian-axis-tick-value,
+.recharts-tooltip-item-value {
+  font-family: 'JetBrains Mono Variable', monospace;
   font-size: 0.68rem;
 }
 

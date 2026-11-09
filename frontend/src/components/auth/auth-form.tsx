@@ -355,7 +355,7 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
                     <div className="relative">
                       <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-emerald-300" aria-hidden="true" />
                       <Input
-                        className="h-12 pl-11 text-center font-data text-xl tracking-[0.38em]"
+                        className="h-12 pl-11 text-center font-numeric text-xl tracking-[0.38em]"
                         id="verification-code"
                         name="verification_code"
                         inputMode="numeric"
