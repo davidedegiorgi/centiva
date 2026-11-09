@@ -143,7 +143,7 @@ export function ImportPage() {
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle>Scegli il file</CardTitle>
-          <CardDescription>CSV bancari, screenshot di transazioni, scontrini e appunti fotografati.</CardDescription>
+          <CardDescription>CSV bancari, screenshot di transazioni e scontrini.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-[1fr_13rem] md:block">
@@ -155,7 +155,7 @@ export function ImportPage() {
               data-cursor-label="UPLOAD"
             >
               {isReading ? <FileScan className="mb-3 size-8 text-emerald-300" /> : <Upload className="mb-3 size-8 text-emerald-300" />}
-              <span className="font-medium text-foreground">{isReading ? `Analisi in corso${progress ? ` · ${progress}%` : '…'}` : 'Carica file o screenshot'}</span>
+              <span className="font-medium text-foreground">{isReading ? `Analisi in corso${progress ? ` · ${progress}%` : '…'}` : 'Carica file'}</span>
               <span className="mt-1 text-sm text-muted-foreground">CSV, JPG, PNG o WebP</span>
             </button>
             <button

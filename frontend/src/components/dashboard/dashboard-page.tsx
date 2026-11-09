@@ -98,7 +98,6 @@ export function DashboardPage({ onOpenImport }: DashboardPageProps) {
       {error && <Alert variant="destructive"><AlertTitle>Aggiornamento non riuscito</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>}
 
       <section className="group relative isolate overflow-hidden py-9 sm:py-14" aria-label="Risultato del mese">
-        <div className="pointer-events-none absolute left-[12%] top-1/2 -z-10 size-44 -translate-y-1/2 rounded-full bg-emerald-400/15 blur-[90px] transition-[transform,opacity] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-150 group-hover:opacity-80 sm:size-64" aria-hidden="true" />
         <div className="flex flex-col gap-5 sm:gap-7">
           <p className="font-data text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-emerald-300">Risultato del mese</p>
           <LiquidNumber className="dashboard-result-number block whitespace-nowrap text-[clamp(2.8rem,10vw,8.5rem)] font-black leading-[0.82] tracking-[-0.075em] text-white drop-shadow-[0_10px_34px_rgba(255,255,255,0.12)] transition-[letter-spacing,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1 group-hover:tracking-[-0.055em]" value={dashboard.summary.net_savings} currency={dashboard.currency} />
