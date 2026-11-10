@@ -32,6 +32,11 @@ interface VoiceCommandButtonProps {
 export function VoiceCommandButton({ placement = 'header', onSaved }: VoiceCommandButtonProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const processingTimerRef = useRef<number | null>(null)
+  const listeningTimerRef = useRef<number | null>(null)
+  const retryTimerRef = useRef<number | null>(null)
+  const candidatesRef = useRef<string[]>([])
+  const recognitionErrorRef = useRef<string | null>(null)
+  const stoppedByUserRef = useRef(false)
   const [isListening, setIsListening] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -44,49 +49,153 @@ export function VoiceCommandButton({ placement = 'header', onSaved }: VoiceComma
   useEffect(() => () => {
     recognitionRef.current?.stop()
     if (processingTimerRef.current !== null) window.clearTimeout(processingTimerRef.current)
+    if (listeningTimerRef.current !== null) window.clearTimeout(listeningTimerRef.current)
+    if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current)
   }, [])
+
+  function clearListeningTimer() {
+    if (listeningTimerRef.current === null) return
+    window.clearTimeout(listeningTimerRef.current)
+    listeningTimerRef.current = null
+  }
+
+  function collectCandidates(event: SpeechRecognitionEventLike) {
+    const resultGroups = Array.from(
+      { length: event.results.length },
+      (_, resultIndex) => {
+        const result = event.results[resultIndex]
+        return Array.from(
+          { length: result?.length ?? 0 },
+          (_, alternativeIndex) => result?.[alternativeIndex]?.transcript?.trim() ?? '',
+        ).filter(Boolean)
+      },
+    ).filter((group) => group.length > 0)
+
+    const primaryTranscript = resultGroups.map((group) => group[0]).join(' ').trim()
+    return Array.from(new Set([
+      primaryTranscript,
+      ...resultGroups.flat(),
+      ...candidatesRef.current,
+    ].filter(Boolean)))
+  }
+
+  function processCandidates() {
+    const transcript = candidatesRef.current.find((candidate) => parseVoiceTransaction(candidate))
+      ?? candidatesRef.current[0]
+      ?? ''
+
+    setMessage(null)
+    setIsProcessing(true)
+    processingTimerRef.current = window.setTimeout(() => {
+      const parsed = parseVoiceTransaction(transcript)
+      setIsProcessing(false)
+      processingTimerRef.current = null
+      if (!parsed) {
+        setMessage(`Non ho riconosciuto l’importo. ${voiceCommandExamples}`)
+        return
+      }
+      setDraft(parsed)
+    }, 350)
+  }
+
+  function startRecognition(attempt: number) {
+    if (!Recognition) return
+
+    const recognition = new Recognition()
+    recognition.lang = 'it-IT'
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.maxAlternatives = 5
+    recognition.onresult = (event) => {
+      candidatesRef.current = collectCandidates(event)
+      setMessage('Voce rilevata… completa la frase.')
+    }
+    recognition.onerror = (event) => {
+      recognitionErrorRef.current = event.error
+    }
+    recognition.onend = () => {
+      clearListeningTimer()
+      recognitionRef.current = null
+
+      const recognitionError = recognitionErrorRef.current
+      const hasCandidates = candidatesRef.current.length > 0
+      const canRetry = !stoppedByUserRef.current
+        && attempt === 0
+        && (!hasCandidates || recognitionError === 'no-speech' || recognitionError === 'network')
+
+      if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed') {
+        setIsListening(false)
+        setMessage('Consenti l’uso del microfono nelle impostazioni del browser.')
+        return
+      }
+      if (recognitionError === 'audio-capture') {
+        setIsListening(false)
+        setMessage('Il microfono non è disponibile. Controlla che non sia usato da un’altra app.')
+        return
+      }
+      if (hasCandidates) {
+        setIsListening(false)
+        processCandidates()
+        return
+      }
+      if (canRetry) {
+        recognitionErrorRef.current = null
+        setMessage('Non ho sentito bene. Riprova, ti ascolto ancora…')
+        retryTimerRef.current = window.setTimeout(() => {
+          retryTimerRef.current = null
+          if (stoppedByUserRef.current) {
+            setIsListening(false)
+            return
+          }
+          startRecognition(1)
+        }, 300)
+        return
+      }
+
+      setIsListening(false)
+      setMessage(stoppedByUserRef.current
+        ? 'Registrazione interrotta.'
+        : 'Non ho sentito una frase completa. Avvicinati al microfono e riprova.')
+    }
+    recognitionRef.current = recognition
+    try {
+      recognition.start()
+      listeningTimerRef.current = window.setTimeout(() => recognition.stop(), 12_000)
+    } catch {
+      recognitionRef.current = null
+      setIsListening(false)
+      setMessage('Non sono riuscito ad avviare il microfono. Attendi un momento e riprova.')
+    }
+  }
 
   function startListening() {
     if (!Recognition) {
       setMessage('Il comando vocale non è supportato da questo browser.')
       return
     }
-    if (isListening) return recognitionRef.current?.stop()
+    if (isListening) {
+      stoppedByUserRef.current = true
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+        setIsListening(false)
+        setMessage('Registrazione interrotta.')
+        return
+      }
+      recognitionRef.current?.stop()
+      return
+    }
 
+    if (processingTimerRef.current !== null) window.clearTimeout(processingTimerRef.current)
+    if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current)
+    clearListeningTimer()
+    candidatesRef.current = []
+    recognitionErrorRef.current = null
+    stoppedByUserRef.current = false
     setError(null)
-    const recognition = new Recognition()
-    recognition.lang = 'it-IT'
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.maxAlternatives = 5
-    recognition.onresult = (event) => {
-      const result = event.results[event.results.length - 1]
-      const alternatives = Array.from({ length: result?.length ?? 0 }, (_, index) => result?.[index]?.transcript?.trim() ?? '').filter(Boolean)
-      const transcript = alternatives.find((alternative) => parseVoiceTransaction(alternative)) ?? alternatives[0] ?? ''
-      setMessage(null)
-      setIsProcessing(true)
-      processingTimerRef.current = window.setTimeout(() => {
-        const parsed = parseVoiceTransaction(transcript)
-        setIsProcessing(false)
-        processingTimerRef.current = null
-        if (!parsed) {
-          setMessage(`Non ho riconosciuto l’importo. ${voiceCommandExamples}`)
-          return
-        }
-        setDraft(parsed)
-      }, 350)
-    }
-    recognition.onerror = (event) => {
-      setIsProcessing(false)
-      setMessage(event.error === 'not-allowed'
-        ? 'Consenti l’uso del microfono nelle impostazioni del browser.'
-        : 'Non sono riuscito ad ascoltare. Riprova.')
-    }
-    recognition.onend = () => { setIsListening(false); recognitionRef.current = null }
-    recognitionRef.current = recognition
     setMessage('Ti ascolto… puoi dire importo, categoria o tipo di movimento nell’ordine che preferisci.')
     setIsListening(true)
-    recognition.start()
+    startRecognition(0)
   }
 
   async function saveTransaction() {
